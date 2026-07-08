@@ -80,6 +80,54 @@ The default `board.yml` ships with columns matching the flow above — rename/re
    `sync.auto_move`) — whose `on_enter` can kick off your E2E script, a verification agent, whatever.
 7. **Done.** `mb move <card> done`, then `mb archive <card>` when you never want to see it again.
 
+## Connectors: wiring up a blank board
+
+A fresh board leads with **connector tiles** — the things sources need before they can pull
+(`mb connect` in the terminal, or the Sources panel on the web board, which auto-opens when the
+board is empty):
+
+| Tile | What it is | Setup |
+|---|---|---|
+| **Claude** | The Claude Code CLI — fires/resumes every card's sessions and runs source pulls. | Install it, log in once, then prove it end-to-end: `mb connect claude --verify` (runs a real tiny headless call). |
+| **Slack MCP** | Lets prompts read Slack channels/threads. | `mb connect slack` (needs `SLACK_BOT_TOKEN` + `SLACK_TEAM_ID` exported). |
+| **Atlassian MCP** | Jira + Confluence via Atlassian's hosted MCP (OAuth). | `mb connect atlassian`, then complete OAuth via `/mcp` inside `claude`. |
+| **Google Drive MCP** | Search/read Drive files. | `mb connect gdrive` (Google OAuth on first run). |
+
+Status is probed from reality (`claude --version`, `claude mcp list`) and cached in `state.yml`:
+**●** connected · **◐** configured but not connected/verified · **○** not set up. Every setup
+command is just a default — override any tile (or add new ones, e.g. Sentry) under `connectors:`
+in `board.yml`.
+
+## Sources: prompts that pull cards onto the board
+
+A **source** is a configurable prompt plus a tool allowlist plus a target column:
+
+```yaml
+sources:
+  - id: slack-feedback
+    title: Slack user feedback
+    prompt: "Look at the #user-feedback channel in Slack and find issues folks reported in the past 24 hours."
+    tools: [slack]
+    column: inbox
+  - id: my-prs
+    prompt: List open GitHub PRs assigned to me or where my review is requested.
+    tools: [github]
+```
+
+`mb pull` (or the tile's **Pull now** button) wraps the prompt in a harness that tells Claude:
+what board this is, **every card already on it** (so it self-dedupes), and the exact JSON card
+contract it must answer with — `{"cards": [{title, type, pr, ticket, slack, note, dedupe_key}]}`.
+The run executes as `claude -p … --output-format json --allowedTools <only the source's tools>`,
+and the response is validated, **deduped again on ingest** (by `dedupe_key` per source and by
+PR/ticket/Slack ref), and turned into cards in the source's column — each stamped with
+`origin: {source, key}` and the scan's session id recorded on the source.
+
+Tool names map to allowlists: `slack`/`atlassian`/`gdrive` → their MCP servers, `github` → the
+`gh` CLI, `web` → web search — or pass any raw pattern like `mcp__sentry`. Pulls are synchronous
+in the CLI (`--bg` for background) and always background from the web UI; finished background
+pulls are ingested the next time anything reads the board. Editing sources in the web UI writes
+them back to `board.yml` surgically — your comments survive.
+
 ## Claude sessions: the model
 
 A card is **not** one Claude session. Every headless `claude -p` run is a new session, and even
@@ -163,6 +211,11 @@ mb session <card> <session-id>   attach a session id  [--label "…"]
 mb show <card>                   full detail: refs, PR state, sessions, activity
 mb attention                     everything that needs you right now (alias: todo)
 mb sync [card] [--no-move]       pull live PR state via gh; auto-move merged/closed
+mb connect [id] [--check]        connector tiles: status / set one up
+mb connect claude --verify       prove Claude auth with a real tiny run
+mb sources                       list sources + their last runs
+mb pull [source] [--bg|--dry-run] run source prompts through Claude; ingest JSON cards
+mb sessions                      every Claude session across all cards
 mb flag <card> "reason"          manually mark a card; mb unflag <card> clears
 mb open <card> [pr|ticket|slack] open a ref in the browser
 mb list [--col <column>]         flat list        mb archive <card>   hide a card
@@ -178,6 +231,12 @@ Cards are addressed by id (`mb-3`), bare number (`3`), or any unique title subst
 refs, PR state, the session trail, and the activity log — plus **Comment**, **Fire to session ⚡**,
 and **New agent 🤖** buttons. State on disk stays the source of truth: the CLI and the web UI can
 be used side by side, and the page just re-reads the files.
+
+On a blank board the **Sources panel** opens first: connector tiles with live status, copyable
+setup commands and a **Verify auth** button, and source tiles with their prompts, **Pull now**,
+and a **+ New source** editor that writes back to `board.yml`.
+
+![the sources panel](docs/web-sources.png)
 
 ![the card drawer](docs/web-drawer.png)
 

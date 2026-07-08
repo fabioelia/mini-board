@@ -6,13 +6,16 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import YAML from 'yaml';
 import {
-  loadBoard, loadState, saveState, createCard, resolveCard, moveCard,
+  BOARD_FILE, loadBoard, loadState, saveState, createCard, resolveCard, moveCard,
   logEntry, getColumn,
 } from './store.js';
 import { computeAttention, attentionList } from './attention.js';
 import { actionsForMove, namedAction, runAction, harvestSessions } from './actions.js';
 import { syncAll } from './sync.js';
+import { resolveConnectors, checkConnectors, verifyClaude } from './connectors.js';
+import { boardSources, runPull, harvestPulls } from './sources.js';
 import { nowIso } from './util.js';
 
 const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
@@ -20,7 +23,9 @@ const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
 function boardPayload(root) {
   const board = loadBoard(root);
   const state = loadState(root);
-  if (harvestSessions(root, state) > 0) saveState(root, state);
+  const sessions = harvestSessions(root, state);
+  const pulls = harvestPulls(root, board, state);
+  if (sessions || pulls.length) saveState(root, state);
   const cards = Object.entries(state.cards)
     .filter(([, c]) => !c.archived)
     .map(([id, card]) => ({ id, ...card, attention: computeAttention(board, card) }));
@@ -32,8 +37,55 @@ function boardPayload(root) {
     },
     cards,
     attention_count: attentionList(board, state).length,
+    setup: setupPayload(board, state),
     generated: nowIso(),
   };
+}
+
+// Connector tiles + sources, with last-known status from state.
+function setupPayload(board, state) {
+  let sessionCount = 0;
+  let sessionCards = 0;
+  for (const card of Object.values(state.cards)) {
+    if (card.sessions?.length) { sessionCount += card.sessions.length; sessionCards++; }
+  }
+  return {
+    connectors: resolveConnectors(board).map((c) => ({
+      id: c.id, kind: c.kind, title: c.title, description: c.description,
+      setup: c.setup, instructions: c.instructions, needs_env: c.needs_env ?? [],
+      status: state.connectors?.[c.id] ?? null,
+      ...(c.id === 'claude' ? { sessions: sessionCount, session_cards: sessionCards } : {}),
+    })),
+    sources: boardSources(board).map((s) => ({
+      ...s,
+      status: state.sources?.[s.id] ?? null,
+      pulling: (state.pending_pulls ?? []).some((p) => p.source === s.id),
+    })),
+  };
+}
+
+// Add or update a source in board.yml surgically, preserving the rest of the
+// file (comments included) via the YAML document API.
+function saveSource(root, def) {
+  const file = path.join(root, BOARD_FILE);
+  const doc = YAML.parseDocument(fs.readFileSync(file, 'utf8'));
+  const node = doc.createNode({
+    id: def.id,
+    title: def.title,
+    prompt: def.prompt,
+    tools: def.tools,
+    column: def.column,
+    ...(def.enabled === false ? { enabled: false } : {}),
+  });
+  const seq = doc.get('sources');
+  if (!seq || !seq.items) {
+    doc.set('sources', doc.createNode([node]));
+  } else {
+    const idx = seq.items.findIndex((item) => item?.get?.('id') === def.id);
+    if (idx >= 0) seq.items[idx] = node;
+    else seq.items.push(node);
+  }
+  fs.writeFileSync(file, doc.toString());
 }
 
 function readBody(req) {
@@ -169,6 +221,54 @@ export function startServer(root, port = 4400) {
         }
         saveState(root, state);
         json(res, 200, { ok: true, ...boardPayload(root) });
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/connectors/check') {
+        const board = loadBoard(root);
+        const state = loadState(root);
+        const statuses = checkConnectors(board, state);
+        state.connectors = { ...state.connectors, ...statuses };
+        saveState(root, state);
+        json(res, 200, { ok: true, ...boardPayload(root) });
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/connectors/verify') {
+        const state = loadState(root);
+        const result = verifyClaude();
+        if (result.ok) {
+          state.connectors ??= {};
+          state.connectors.claude = { ...state.connectors.claude, verified: nowIso() };
+          saveState(root, state);
+        }
+        json(res, result.ok ? 200 : 502, { ok: result.ok, detail: result.detail, ...boardPayload(root) });
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/source/pull') {
+        const { source } = await readBody(req);
+        const board = loadBoard(root);
+        const state = loadState(root);
+        const result = runPull(root, board, state, source, { background: true });
+        saveState(root, state);
+        json(res, result.ok ? 200 : 400, { ...result, ...boardPayload(root) });
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/source/save') {
+        const body = await readBody(req);
+        const id = String(body.id ?? '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+        if (!id) return json(res, 400, { error: 'source id required' });
+        if (!body.prompt?.trim()) return json(res, 400, { error: 'prompt required' });
+        const board = loadBoard(root);
+        const column = body.column || board.columns[0].id;
+        if (!getColumn(board, column)) return json(res, 400, { error: `unknown column "${column}"` });
+        saveSource(root, {
+          id,
+          title: String(body.title ?? id).trim() || id,
+          prompt: body.prompt.trim(),
+          tools: Array.isArray(body.tools) ? body.tools.filter(Boolean) : [],
+          column,
+          enabled: body.enabled !== false,
+        });
+        json(res, 200, { ok: true, id, ...boardPayload(root) });
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/archive') {

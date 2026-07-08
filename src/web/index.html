@@ -101,6 +101,38 @@
   textarea { resize: vertical; min-height: 64px; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
+  /* sources & connectors panel */
+  #setup { display: none; padding: 14px 16px 4px; border-bottom: 1px solid var(--border); background: #10141b; }
+  #setup.open { display: block; }
+  .setup-head {
+    display: flex; align-items: center; gap: 10px; margin: 4px 2px 10px;
+    font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em;
+  }
+  .setup-head .line { flex: 1; height: 1px; background: var(--border); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 7px; }
+  .tile-top { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .dot { width: 9px; height: 9px; border-radius: 99px; background: #4a5468; flex: none; }
+  .dot.green { background: var(--green); }
+  .dot.yellow { background: var(--yellow); }
+  .tile .desc { font-size: 12.5px; color: var(--dim); }
+  .tile .detail { font-size: 11.5px; color: var(--dim); font-family: ui-monospace, monospace; word-break: break-all; }
+  .tile code {
+    display: block; font-size: 11px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; overflow-x: auto; white-space: nowrap; cursor: copy;
+  }
+  .tile .btns { display: flex; gap: 6px; margin-top: auto; }
+  .tile .btns button { font-size: 12px; padding: 4px 10px; }
+  .tile .prompt { font-size: 13px; font-style: italic; color: var(--text); }
+  .tile .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tile.add {
+    border-style: dashed; align-items: center; justify-content: center; color: var(--dim);
+    cursor: pointer; min-height: 110px; font-size: 13px;
+  }
+  .tile.add:hover { border-color: var(--accent); color: var(--accent); }
+  .run-ok { color: var(--green); font-size: 12px; }
+  .run-err { color: var(--red); font-size: 12px; }
+  .run-busy { color: var(--yellow); font-size: 12px; }
   #toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
@@ -123,9 +155,19 @@
   <h1 id="board-name">mini-board</h1>
   <span class="pill" id="att-pill">…</span>
   <span class="spacer"></span>
+  <button id="btn-setup">Sources</button>
   <button id="btn-add">+ Card</button>
   <button id="btn-sync">Sync PRs</button>
 </header>
+
+<section id="setup">
+  <div class="setup-head">Connectors — wire these up once <span class="line"></span>
+    <button id="btn-check">Re-check</button></div>
+  <div class="tiles" id="connector-tiles"></div>
+  <div class="setup-head">Sources — prompts that pull cards onto the board <span class="line"></span></div>
+  <div class="tiles" id="source-tiles"></div>
+</section>
+
 <main id="main"></main>
 
 <div id="overlay"></div>
@@ -173,6 +215,30 @@
     <div class="row">
       <button id="m-cancel">Cancel</button>
       <button id="m-save" class="primary">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-src" class="" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:rgba(0,0,0,.45)">
+  <div class="box" style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:min(520px,92vw)">
+    <h3 id="s-heading" style="margin:0 0 12px">New source</h3>
+    <input id="s-title" placeholder="Title (e.g. Slack user feedback)" />
+    <textarea id="s-prompt" placeholder='Prompt — e.g. "Look at the #user-feedback channel in Slack and find issues reported in the past 24 hours" or "List open PRs where my review is requested"'></textarea>
+    <div class="row" style="margin-bottom:8px">
+      <label style="flex:2;font-size:12.5px;color:var(--dim)">Tools:
+        <span id="s-tools" style="display:inline-flex;gap:10px;flex-wrap:wrap;margin-left:6px">
+          <label><input type="checkbox" style="width:auto" value="slack"> slack</label>
+          <label><input type="checkbox" style="width:auto" value="atlassian"> atlassian</label>
+          <label><input type="checkbox" style="width:auto" value="gdrive"> gdrive</label>
+          <label><input type="checkbox" style="width:auto" value="github"> github (gh)</label>
+          <label><input type="checkbox" style="width:auto" value="web"> web search</label>
+        </span>
+      </label>
+      <select id="s-col" style="flex:1"></select>
+    </div>
+    <div class="row">
+      <button id="s-cancel">Cancel</button>
+      <button id="s-save" class="primary">Save to board.yml</button>
     </div>
   </div>
 </div>
@@ -284,7 +350,135 @@ function render() {
     el.addEventListener('click', () => openDrawer(el.dataset.id));
   });
   if (openCardId) fillDrawer(openCardId);
+  renderSetup();
 }
+
+function connectorTile(c) {
+  const s = c.status || {};
+  const dot = s.connected ? 'green' : s.configured ? 'yellow' : '';
+  const detail = s.detail || 'unchecked — hit Re-check';
+  const sess = c.id === 'claude' && c.sessions
+    ? `<div class="detail">⚡ ${c.sessions} session(s) across ${c.session_cards} card(s)</div>` : '';
+  return `<div class="tile" data-conn="${c.id}">
+    <div class="tile-top"><span class="dot ${dot}"></span>${esc(c.title)}</div>
+    <div class="desc">${esc(c.description)}</div>
+    <div class="detail">${esc(detail)}</div>
+    ${sess}
+    ${c.setup ? `<code title="click to copy">${esc(c.setup)}</code>` : ''}
+    ${c.needs_env?.length ? `<div class="detail">needs env: ${c.needs_env.map(esc).join(', ')}</div>` : ''}
+    <div class="btns">
+      ${c.id === 'claude' ? '<button data-act="verify">Verify auth</button>' : ''}
+      ${!s.connected && c.instructions ? `<button data-act="how">How?</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function sourceTile(s) {
+  const st = s.status || {};
+  const run = s.pulling || st.last_status === 'running'
+    ? '<span class="run-busy">⏳ pulling… (cards land on refresh)</span>'
+    : st.last_status === 'ok' ? `<span class="run-ok">✓ ${esc(st.last_summary || 'ok')}</span>`
+    : st.last_status === 'error' ? `<span class="run-err">✗ ${esc(st.last_summary || 'error')}</span>`
+    : '<span class="detail">never run</span>';
+  return `<div class="tile src" data-src="${esc(s.id)}">
+    <div class="tile-top">${esc(s.title)} <span class="detail" style="margin-left:auto">→ ${esc(s.column)}</span></div>
+    <div class="prompt">“${esc(s.prompt)}”</div>
+    <div class="chips">${(s.tools || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('') || '<span class="detail">no tools</span>'}</div>
+    <div>${run}</div>
+    <div class="btns">
+      <button data-act="pull" class="primary" ${s.pulling ? 'disabled' : ''}>Pull now</button>
+      <button data-act="edit">Edit</button>
+    </div>
+  </div>`;
+}
+
+function renderSetup() {
+  const setup = DATA.setup;
+  if (!setup) return;
+  $('#connector-tiles').innerHTML = setup.connectors.map(connectorTile).join('');
+  $('#source-tiles').innerHTML =
+    setup.sources.map(sourceTile).join('') +
+    '<div class="tile add" id="tile-add-src">+ New source</div>';
+
+  document.querySelectorAll('#connector-tiles code').forEach((el) => {
+    el.addEventListener('click', () => {
+      navigator.clipboard?.writeText(el.textContent);
+      toast('setup command copied — run it in your terminal, then Re-check');
+    });
+  });
+  document.querySelectorAll('#connector-tiles [data-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('.tile').dataset.conn;
+      const conn = setup.connectors.find((c) => c.id === id);
+      if (btn.dataset.act === 'how') { alert(conn.instructions || 'no instructions'); return; }
+      if (btn.dataset.act === 'verify') {
+        btn.disabled = true; btn.textContent = 'Verifying…';
+        try {
+          const res = await api('/api/connectors/verify', {});
+          DATA = res; render();
+          toast(res.ok ? '✓ Claude auth works' : 'verify failed: ' + res.detail, 5000);
+        } catch (err) { toast('verify failed: ' + err.message, 5000); render(); }
+      }
+    });
+  });
+  document.querySelectorAll('#source-tiles [data-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('.tile').dataset.src;
+      if (btn.dataset.act === 'edit') { openSourceModal(setup.sources.find((s) => s.id === id)); return; }
+      if (btn.dataset.act === 'pull') {
+        btn.disabled = true;
+        try {
+          const res = await api('/api/source/pull', { source: id });
+          DATA = res; render();
+          toast('pull started — Claude is scanning with the source tools; new cards appear when it finishes');
+        } catch (err) { toast('pull failed: ' + err.message, 5000); btn.disabled = false; }
+      }
+    });
+  });
+  const addTile = $('#tile-add-src');
+  if (addTile) addTile.addEventListener('click', () => openSourceModal(null));
+}
+
+let editingSourceId = null;
+function openSourceModal(src) {
+  editingSourceId = src?.id ?? null;
+  $('#s-heading').textContent = src ? `Edit source: ${src.id}` : 'New source';
+  $('#s-title').value = src?.title ?? '';
+  $('#s-prompt').value = src?.prompt ?? '';
+  $('#s-col').innerHTML = DATA.board.columns.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
+  if (src?.column) $('#s-col').value = src.column;
+  document.querySelectorAll('#s-tools input').forEach((cb) => {
+    cb.checked = (src?.tools ?? []).includes(cb.value);
+  });
+  $('#modal-src').style.display = 'flex';
+}
+$('#s-cancel').addEventListener('click', () => { $('#modal-src').style.display = 'none'; });
+$('#s-save').addEventListener('click', async () => {
+  const title = $('#s-title').value.trim();
+  const prompt = $('#s-prompt').value.trim();
+  if (!prompt) return toast('prompt required');
+  const tools = [...document.querySelectorAll('#s-tools input:checked')].map((cb) => cb.value);
+  const id = editingSourceId || (title || 'source').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  try {
+    const res = await api('/api/source/save', {
+      id, title: title || id, prompt, tools, column: $('#s-col').value,
+    });
+    DATA = res; render();
+    $('#modal-src').style.display = 'none';
+    toast(`source "${id}" saved to board.yml`);
+  } catch (err) { toast('save failed: ' + err.message, 5000); }
+});
+$('#btn-setup').addEventListener('click', () => $('#setup').classList.toggle('open'));
+$('#btn-check').addEventListener('click', async () => {
+  const btn = $('#btn-check');
+  btn.disabled = true; btn.textContent = 'Checking…';
+  try {
+    const res = await api('/api/connectors/check', {});
+    DATA = res; render();
+    toast('connector status refreshed');
+  } catch (err) { toast('check failed: ' + err.message, 5000); }
+  btn.disabled = false; btn.textContent = 'Re-check';
+});
 
 function wireDnd() {
   document.querySelectorAll('.card').forEach((el) => {
@@ -326,7 +520,7 @@ function refLink(label, url) {
 function fillDrawer(id) {
   const card = DATA.cards.find((c) => c.id === id);
   if (!card) { closeDrawer(); return; }
-  $('#d-id').textContent = `${card.id} · ${card.type} · ${card.column}${card.project ? ' · ' + card.project : ''}`;
+  $('#d-id').textContent = `${card.id} · ${card.type} · ${card.column}${card.project ? ' · ' + card.project : ''}${card.origin ? ` · from source "${card.origin.source}"` : ''}`;
   $('#d-title').textContent = card.title;
   $('#d-sub').textContent = `created ${age(card.created)} ago · updated ${age(card.updated)} ago`;
 
@@ -444,13 +638,21 @@ $('#m-save').addEventListener('click', async () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeDrawer(); $('#modal').classList.remove('open'); }
+  if (e.key === 'Escape') {
+    closeDrawer();
+    $('#modal').classList.remove('open');
+    $('#modal-src').style.display = 'none';
+  }
 });
 
+let firstLoad = true;
 async function refresh() {
   try {
     DATA = await api('/api/board');
     render();
+    // A blank board leads with the setup tiles: wire connectors, add sources.
+    if (firstLoad && DATA.cards.length === 0) $('#setup').classList.add('open');
+    firstLoad = false;
   } catch (err) { toast('load failed: ' + err.message); }
 }
 refresh();

@@ -148,7 +148,7 @@ export function renderCard(board, id, card) {
   const attention = computeAttention(board, card);
   const out = [];
   out.push(`${paint.bold(id)}  ${card.title}`);
-  out.push(paint.dim(`${TYPE_ICON[card.type] ?? card.type} · column: ${card.column}${card.project ? ` · project: ${card.project}` : ''}${card.archived ? ' · ARCHIVED' : ''}`));
+  out.push(paint.dim(`${TYPE_ICON[card.type] ?? card.type} · column: ${card.column}${card.project ? ` · project: ${card.project}` : ''}${card.origin ? ` · from source "${card.origin.source}"` : ''}${card.archived ? ' · ARCHIVED' : ''}`));
   out.push('');
   if (attention.length) {
     out.push(paint.bold('Attention:'));

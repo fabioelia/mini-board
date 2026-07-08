@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   BOARD_FILE, STATE_FILE, findRoot, loadBoard, loadState, saveState,
   createCard, resolveCard, moveCard, logEntry, latestSession, getColumn,
@@ -17,6 +17,10 @@ import { syncAll, syncCard } from './sync.js';
 import { renderBoard, renderCard, renderAttention, paint } from './render.js';
 import { nowIso } from './util.js';
 import { startServer } from './server.js';
+import {
+  resolveConnectors, checkConnectors, verifyClaude, missingEnv,
+} from './connectors.js';
+import { boardSources, runPull, harvestPulls } from './sources.js';
 
 const HELP = `mini-board — a tiny YAML-driven board for PRs, tickets, and Slack asks
 
@@ -39,6 +43,13 @@ Usage: mb <command> [args]
   mb attention                     everything that needs you right now (alias: todo)
   mb sync [card]                   pull live PR state via gh; auto-move merged/closed
        --no-move                   don't auto-move
+  mb connect [id]                  connector tiles: status, or set one up
+       --check                     re-probe claude CLI + MCP servers
+       claude --verify             prove Claude auth works with a real (tiny) run
+  mb sources                       list the board's sources and their last runs
+  mb pull [source]                 run source prompt(s) through Claude; ingest JSON cards
+       --bg --dry-run              background / just print the command
+  mb sessions                      every Claude session across all cards
   mb flag <card> "reason"          manually mark a card as needing attention
   mb unflag <card>                 clear manual flags
   mb open <card> [pr|ticket|slack] open a card's ref in the browser
@@ -98,6 +109,21 @@ function reportAction(res) {
   }
 }
 
+// Pick up anything background runs left behind: Claude session ids from agent
+// logs, and finished source pulls.
+function harvest(root, board, state) {
+  const sessions = harvestSessions(root, state);
+  const pulls = harvestPulls(root, board, state);
+  if (sessions || pulls.length) saveState(root, state);
+  for (const p of pulls) {
+    console.log(
+      p.ok
+        ? paint.dim(`source "${p.source}" finished: ${p.summary}`)
+        : paint.red(`source "${p.source}" failed: ${p.error}`),
+    );
+  }
+}
+
 const commands = {
   init([dir]) {
     const target = path.resolve(dir ?? '.');
@@ -108,14 +134,18 @@ const commands = {
     fs.copyFileSync(path.join(templateDir, 'board.yml'), boardFile);
     saveState(target, { next_id: 1, cards: {} });
     console.log(`Created ${boardFile} and ${path.join(target, STATE_FILE)}.`);
-    console.log('Edit board.yml to taste, then: mb add "My first card" --pr <url>');
+    console.log('Next steps:');
+    console.log('  mb connect            wire up Claude + the Slack/Atlassian/Drive MCP tiles');
+    console.log('  mb pull               run the example sources in board.yml (edit them first)');
+    console.log('  mb add "A card"       or just add cards by hand');
+    console.log('  mb web                the drag-and-drop board (setup tiles included)');
   },
 
   board() {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
-    if (harvestSessions(root, state) > 0) saveState(root, state);
+    harvest(root, board, state);
     console.log(renderBoard(board, state));
   },
 
@@ -240,7 +270,7 @@ const commands = {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
-    if (harvestSessions(root, state) > 0) saveState(root, state);
+    harvest(root, board, state);
     const { id, card } = requireCard(state, args[0]);
     console.log(renderCard(board, id, card));
   },
@@ -249,7 +279,7 @@ const commands = {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
-    if (harvestSessions(root, state) > 0) saveState(root, state);
+    harvest(root, board, state);
     console.log(renderAttention(board, state));
   },
   todo(...a) { return commands.attention(...a); },
@@ -258,8 +288,7 @@ const commands = {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
-    const harvested = harvestSessions(root, state);
-    if (harvested) console.log(paint.dim(`captured ${harvested} Claude session id(s) from agent logs`));
+    harvest(root, board, state);
     const syncOpts = { autoMove: !opts.no_move };
     const results = args[0]
       ? [syncCard(board, state, requireCard(state, args[0]).id, syncOpts)]
@@ -342,6 +371,131 @@ const commands = {
       const mark = attention.length ? paint.red(` ⚠${attention.length}`) : '';
       console.log(`${paint.bold(id)} [${card.column}]${mark} ${card.title}`);
     }
+  },
+
+  connect(args, opts) {
+    const root = requireRoot();
+    const board = loadBoard(root);
+    const state = loadState(root);
+    const connectors = resolveConnectors(board);
+    const id = args[0];
+
+    if (id) {
+      const conn = connectors.find((c) => c.id === id);
+      if (!conn) fail(`unknown connector "${id}" — tiles: ${connectors.map((c) => c.id).join(', ')}`);
+
+      if (conn.id === 'claude' && opts.verify) {
+        console.log('running a tiny headless claude call to verify auth…');
+        const res = verifyClaude();
+        if (res.ok) {
+          state.connectors ??= {};
+          state.connectors.claude = { ...state.connectors.claude, verified: nowIso() };
+          saveState(root, state);
+          console.log(paint.bold('✓ Claude auth works') + paint.dim(` (session ${res.session ?? '?'})`));
+        } else {
+          fail(`Claude auth failed: ${res.detail}`);
+        }
+        return;
+      }
+
+      console.log(`${paint.bold(conn.title)} — ${conn.description}`);
+      const missing = missingEnv(conn);
+      if (!conn.setup) {
+        console.log(conn.instructions ?? 'no setup command — configure it manually');
+      } else if (missing.length) {
+        console.log(paint.red(`missing env: ${missing.join(', ')}`));
+        console.log(`setup (run it yourself once the env is exported):\n  ${conn.setup}`);
+        if (conn.instructions) console.log(paint.dim(conn.instructions));
+      } else {
+        console.log(paint.dim(`running: ${conn.setup}`));
+        const res = spawnSync('/bin/sh', ['-c', conn.setup], { encoding: 'utf8', timeout: 120_000 });
+        process.stdout.write(res.stdout ?? '');
+        process.stderr.write(res.stderr ?? '');
+        if (res.status !== 0) fail(`setup exited ${res.status}`);
+        if (conn.instructions) console.log(paint.dim(conn.instructions));
+      }
+      // fall through to a re-check so the tile status is fresh
+    }
+
+    const statuses = checkConnectors(board, state);
+    state.connectors = { ...state.connectors, ...statuses };
+    saveState(root, state);
+    console.log(paint.bold('Connectors:'));
+    for (const c of connectors) {
+      const s = state.connectors[c.id] ?? {};
+      const dot = s.connected ? paint.green('●') : s.configured ? paint.yellow('◐') : paint.dim('○');
+      console.log(`  ${dot} ${c.id.padEnd(10)} ${c.title.padEnd(18)} ${paint.dim(s.detail ?? 'unchecked')}`);
+      if (!s.configured) console.log(paint.dim(`      → mb connect ${c.id}`));
+    }
+  },
+
+  sources() {
+    const root = requireRoot();
+    const board = loadBoard(root);
+    const state = loadState(root);
+    harvest(root, board, state);
+    const sources = boardSources(board);
+    if (!sources.length) {
+      console.log('no sources in board.yml — add a `sources:` section (see templates/board.yml) or use the web UI');
+      return;
+    }
+    console.log(paint.bold('Sources') + paint.dim(' (mb pull [id] runs them):'));
+    for (const s of sources) {
+      const run = state.sources?.[s.id];
+      const status = run?.last_status === 'ok' ? paint.green(run.last_summary ?? 'ok')
+        : run?.last_status === 'running' ? paint.yellow('running…')
+        : run?.last_status === 'error' ? paint.red(run.last_summary ?? 'error')
+        : paint.dim('never run');
+      console.log(`  ${paint.bold(s.id)} ${s.title}${s.enabled ? '' : paint.dim(' (disabled)')}`);
+      console.log(`      "${s.prompt}"`);
+      console.log(`      tools: ${s.tools.join(', ') || 'none'} · → ${s.column} · ${status}${run?.last_run ? paint.dim(` (${run.last_run})`) : ''}`);
+    }
+  },
+
+  pull(args, opts) {
+    const root = requireRoot();
+    const board = loadBoard(root);
+    const state = loadState(root);
+    harvest(root, board, state);
+    const sources = boardSources(board).filter((s) => s.enabled);
+    const targets = args[0] ? sources.filter((s) => s.id === args[0]) : sources;
+    if (args[0] && !targets.length) fail(`no source "${args[0]}" — sources: ${boardSources(board).map((s) => s.id).join(', ')}`);
+    if (!targets.length) fail('no sources configured — add a `sources:` section to board.yml');
+    for (const source of targets) {
+      const res = runPull(root, board, state, source.id, { background: !!opts.bg, dryRun: !!opts.dry_run });
+      if (res.dryRun) {
+        console.log(paint.bold(source.id) + paint.dim(' would run:'));
+        console.log(`  ${res.cmd.slice(0, 400)}${res.cmd.length > 400 ? '…' : ''}`);
+      } else if (res.background) {
+        console.log(`${paint.bold(source.id)} pulling in background ${paint.dim(`→ ${res.log} (finishes on next mb board/sync)`)}`);
+      } else if (res.ok) {
+        console.log(`${paint.bold(source.id)} ${res.summary}${res.created.length ? ` — ${res.created.join(', ')}` : ''}`);
+      } else {
+        console.log(`${paint.bold(source.id)} ${paint.red(res.error)}`);
+        if (res.tail) console.log(paint.dim(`  ${res.tail.split('\n').slice(-4).join('\n  ')}`));
+      }
+    }
+    saveState(root, state);
+  },
+
+  sessions() {
+    const root = requireRoot();
+    const board = loadBoard(root);
+    const state = loadState(root);
+    harvest(root, board, state);
+    let total = 0;
+    for (const [id, card] of Object.entries(state.cards)) {
+      if (!card.sessions?.length) continue;
+      total += card.sessions.length;
+      console.log(`${paint.bold(id)} ${card.title} ${paint.dim(`[${card.column}]`)}`);
+      card.sessions.forEach((s, i) => {
+        const latest = i === card.sessions.length - 1;
+        console.log(`  ${latest ? '→' : ' '} ${paint.cyan(s.id)} ${paint.dim(`${s.label ?? ''} ${s.at ?? ''}`)}`);
+      });
+    }
+    console.log(total
+      ? paint.dim(`${total} session(s). "→" is what mb comment --fire resumes.`)
+      : 'no Claude sessions yet — mb agent <card> starts one');
   },
 
   web(args, opts) {

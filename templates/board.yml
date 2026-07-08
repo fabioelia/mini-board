@@ -83,3 +83,41 @@ actions:
   # Ideas:
   # notify_slack:
   #   run: curl -s -X POST $SLACK_WEBHOOK -d "{\"text\": $MB_MESSAGE}"
+
+# Sources — configurable prompts that scan the outside world through Claude
+# + your connectors and come back as cards. Run with `mb pull [id]` or the
+# Pull button on the web board. Each prompt is wrapped in a harness that
+# shows Claude the current board (for dedupe) and demands typed JSON cards
+# back, so re-runs don't duplicate.
+#   tools: which connectors the prompt may use — slack / atlassian / gdrive /
+#          github (the gh CLI) / web (search), or any raw --allowedTools
+#          pattern like mcp__sentry.
+#   column: where discovered cards land (default: first column).
+sources:
+  - id: slack-feedback
+    title: Slack user feedback
+    # Quote prompts containing "#" — YAML comments start at " #".
+    prompt: "Look at the #user-feedback channel in Slack and find issues folks reported in the past 24 hours."
+    tools: [slack]
+    column: inbox
+  - id: my-prs
+    title: PRs waiting on me
+    prompt: List open GitHub PRs that are assigned to me or where my review is requested.
+    tools: [github]
+    column: inbox
+  - id: my-tickets
+    title: Tickets on my plate
+    prompt: List Jira tickets assigned to me that are not done, most urgent first.
+    tools: [atlassian]
+    column: inbox
+
+# Connector tiles (`mb connect`, or the Sources panel on the web board) come
+# with built-in setup commands for claude / slack / atlassian / gdrive.
+# Override a tile here if you use a different MCP server, or add new ones —
+# any extra key becomes its own tile.
+# connectors:
+#   slack:
+#     setup: claude mcp add slack -s user -- npx -y some-other-slack-mcp
+#   sentry:
+#     title: Sentry MCP
+#     setup: claude mcp add --transport http sentry https://mcp.sentry.dev/mcp -s user

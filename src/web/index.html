@@ -5,195 +5,394 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>mini-board</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0e1116; --panel: #161b22; --panel-2: #1c2230; --border: #2b3240;
-    --text: #e6e9ef; --dim: #8b94a7; --accent: #6ea8fe; --red: #ff6b6b;
-    --green: #51cf66; --yellow: #ffd43b; --magenta: #da77f2; --cyan: #66d9e8;
-    --radius: 10px;
-  }
   * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    background: #f4f2ee; color: #1c1a17; -webkit-font-smoothing: antialiased;
+    overflow: hidden;
   }
-  header {
-    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 5;
-  }
-  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
-  header .spacer { flex: 1; }
-  .pill {
-    font-size: 12px; padding: 2px 9px; border-radius: 99px;
-    border: 1px solid var(--border); color: var(--dim); background: var(--panel);
-  }
-  .pill.warn { color: #fff; background: #7a2e2e; border-color: #a04040; }
-  button {
-    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer;
-  }
-  button:hover { border-color: var(--accent); }
-  button.primary { background: #24406e; border-color: #3b6db3; }
-  button.danger { border-color: #a04040; color: #ffb4b4; }
-  button:disabled { opacity: .5; cursor: default; }
-  main { padding: 14px 16px 60px; overflow-x: auto; }
-  .lane-label {
-    color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
-    margin: 14px 2px 6px;
-  }
-  .columns { display: flex; gap: 10px; align-items: flex-start; min-width: min-content; }
-  .col {
-    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-    width: 250px; min-width: 250px; padding: 8px; min-height: 60px;
-  }
-  .col.drag-over { border-color: var(--accent); background: #182238; }
-  .col h2 {
-    font-size: 12px; margin: 2px 4px 8px; color: var(--dim); font-weight: 600;
-    text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between;
-  }
-  .card {
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 10px; margin-bottom: 8px; cursor: grab; position: relative;
-  }
-  .card:hover { border-color: var(--accent); }
-  .card .id { color: var(--dim); font-size: 11px; font-family: ui-monospace, monospace; }
-  .card .title { margin: 2px 0 4px; font-weight: 550; }
-  .card .meta { display: flex; flex-wrap: wrap; gap: 5px; font-size: 11px; color: var(--dim); }
-  .tag { border: 1px solid var(--border); border-radius: 5px; padding: 0 5px; background: var(--panel); }
-  .tag.pr-open { color: var(--accent); }
-  .tag.pr-merged { color: var(--magenta); }
-  .tag.pr-closed { color: var(--dim); }
-  .tag.ok { color: var(--green); }
-  .tag.bad { color: var(--red); border-color: #7a2e2e; }
-  .tag.pend { color: var(--yellow); }
-  .tag.sess { color: var(--cyan); }
-  .att-dot {
-    position: absolute; top: -6px; right: -6px; background: var(--red); color: #1a0000;
-    font-size: 11px; font-weight: 700; border-radius: 99px; min-width: 18px; height: 18px;
-    display: flex; align-items: center; justify-content: center; padding: 0 4px;
-  }
-  .att-reasons { margin-top: 6px; font-size: 11.5px; color: var(--red); }
-  .att-reasons div { margin-top: 2px; }
-  /* drawer */
-  #overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 9; }
-  #drawer {
-    position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 92vw); background: var(--panel);
-    border-left: 1px solid var(--border); z-index: 10; display: none; flex-direction: column;
-  }
-  #drawer.open, #overlay.open { display: flex; }
+  a { color: #ea580c; text-decoration: none; }
+  a:hover { color: #c2410c; }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #d9d5cd; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #c4bfb5; background-clip: padding-box; border: 2px solid transparent; }
+  @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .app { display: flex; height: 100vh; width: 100%; overflow: hidden; }
+
+  /* ---------- sidebar ---------- */
+  .side { width: 236px; flex: 0 0 236px; background: #fbfaf8; border-right: 1px solid #e7e3db; display: flex; flex-direction: column; padding: 18px 14px; }
+  .logo { display: flex; align-items: center; gap: 10px; padding: 6px 8px 18px; }
+  .logo-mark { width: 30px; height: 30px; border-radius: 8px; background: #ea580c; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(234,88,12,0.35); }
+  .logo-bars { display: flex; gap: 2.5px; align-items: flex-end; }
+  .logo-bars i { display: block; width: 3px; background: #fff; border-radius: 1px; }
+  .logo-name { font-weight: 800; font-size: 15px; letter-spacing: -0.02em; }
+  .logo-sub { font-size: 11px; color: #97918a; font-weight: 500; }
+  .side-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; color: #a8a29a; text-transform: uppercase; padding: 4px 10px 8px; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; font-size: 13px; font-weight: 600; color: #78716c; background: transparent; border: none; border-radius: 9px; padding: 9px 10px; cursor: pointer; margin-bottom: 2px; }
+  .nav-btn .glyph { width: 18px; text-align: center; font-size: 13px; color: #a8a29a; }
+  .nav-btn .lbl { flex: 1; text-align: left; }
+  .nav-btn .badge { font-size: 10.5px; font-weight: 700; color: #a8a29a; background: #eceae4; border-radius: 20px; padding: 1px 7px; }
+  .nav-btn .badge.hot { color: #b91c1c; background: #fbe9e6; }
+  .nav-btn.active { font-weight: 700; color: #26231f; background: #f0ece4; }
+  .nav-btn.active .glyph { color: #ea580c; }
+  .claude-card { border: 1px solid #e7e3db; border-radius: 12px; padding: 12px; background: #fff; }
+  .claude-card .row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .claude-card .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .claude-card .dot.ok { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
+  .claude-card .dot.warn { background: #d97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.15); }
+  .claude-card .dot.off { background: #c4bfb5; box-shadow: 0 0 0 3px rgba(196,191,181,0.2); }
+  .claude-card .row1 b { font-size: 12.5px; font-weight: 700; }
+  .claude-card .sub { font-size: 11px; color: #8a847c; line-height: 1.5; }
+  .claude-card button { margin-top: 10px; width: 100%; font-size: 11.5px; font-weight: 600; color: #57534e; background: #f4f2ee; border: 1px solid #e7e3db; border-radius: 7px; padding: 6px; cursor: pointer; }
+  .claude-card button:hover { background: #ece9e2; }
+
+  /* ---------- main / views ---------- */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #f4f2ee; }
+  .view { display: none; height: 100%; min-height: 0; }
+  .view.active { display: flex; flex-direction: column; }
+  .view.scroll { display: none; }
+  .view.scroll.active { display: block; overflow-y: auto; }
+
+  .board-head { display: flex; align-items: center; gap: 16px; padding: 16px 22px; border-bottom: 1px solid #e7e3db; background: #fbfaf8; }
+  .board-head h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+  .board-head .sub { font-size: 11.5px; color: #97918a; font-weight: 500; margin-top: 1px; }
+  .btn { font-size: 12.5px; font-weight: 600; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  .btn-ghost { color: #57534e; background: #fff; border: 1px solid #e7e3db; }
+  .btn-ghost:hover { background: #f4f2ee; }
+  .btn-accent { display: flex; align-items: center; gap: 7px; color: #fff; background: #ea580c; border: none; padding: 8px 14px; box-shadow: 0 2px 6px rgba(234,88,12,0.28); }
+  .btn-accent:hover { background: #d24d0a; }
+  .btn-accent .dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .btn:disabled { opacity: .55; cursor: default; }
+
+  .board-body { flex: 1; min-height: 0; display: flex; }
+  .lanes-scroll { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; padding: 18px 22px; }
+  .lanes { display: flex; gap: 14px; height: 100%; align-items: stretch; }
+  .lane { width: 274px; flex: 0 0 274px; display: flex; flex-direction: column; min-height: 0; }
+  .lane-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
+  .lane-dot { width: 9px; height: 9px; border-radius: 3px; }
+  .lane-name { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .lane-count { font-size: 11px; font-weight: 600; color: #a8a29a; background: #eceae4; border-radius: 20px; padding: 1px 7px; }
+  .lane-auto { display: flex; align-items: center; gap: 6px; margin: 0 2px 10px; padding: 6px 9px; background: #fdf5ee; border: 1px solid #f6e2d0; border-radius: 8px; }
+  .lane-auto .k { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: #ea580c; white-space: nowrap; }
+  .lane-auto .v { font-size: 11px; color: #9a6a3f; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lane-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; padding: 8px; margin: 0 -4px; border-radius: 12px; outline: 1.5px dashed transparent; transition: background 0.12s, outline-color 0.12s; }
+  .lane-body.over { background: #fdf3ea; outline-color: #f0a868; }
+  .add-lane { width: 172px; flex: 0 0 172px; align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: #a8a29a; background: transparent; border: 1.5px dashed #d9d5cd; border-radius: 12px; padding: 14px; cursor: pointer; }
+  .add-lane:hover { border-color: #ea580c; color: #ea580c; }
+
+  .ticket { background: #fff; border: 1px solid #eae6de; border-radius: 11px; padding: 12px 13px; cursor: grab; box-shadow: 0 1px 2px rgba(28,26,23,0.04); transition: box-shadow 0.15s, border-color 0.15s, opacity 0.12s; user-select: none; }
+  .ticket:hover { border-color: #d6d1c8; box-shadow: 0 4px 14px rgba(28,26,23,0.09); }
+  .ticket.dragging { opacity: 0.5; box-shadow: 0 10px 26px rgba(28,26,23,0.16); }
+  .ticket .top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .type-chip { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; border-radius: 5px; padding: 2px 7px; text-transform: uppercase; }
+  .src-badge { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; border-radius: 5px; padding: 2px 5px; letter-spacing: 0.02em; }
+  .ticket .ref { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #b0aaa1; margin-left: auto; }
+  .ticket .title { font-size: 13px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; color: #26231f; }
+  .ticket .foot { display: flex; align-items: center; gap: 7px; margin-top: 11px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+  .status-dot.pulse { animation: pulseDot 1.4s infinite; }
+  .ticket .status-lbl { font-size: 11px; font-weight: 600; }
+  .ticket .when { font-size: 10.5px; color: #b0aaa1; font-weight: 500; margin-left: auto; }
+
+  .activity { width: 296px; flex: 0 0 296px; border-left: 1px solid #e7e3db; background: #fbfaf8; display: flex; flex-direction: column; }
+  .activity.hidden { display: none; }
+  .activity-head { padding: 16px 18px 12px; border-bottom: 1px solid #e7e3db; display: flex; align-items: center; gap: 8px; }
+  .activity-head b { font-size: 13px; font-weight: 700; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulseDot 1.6s infinite; margin-left: auto; }
+  .activity-head .live { font-size: 10.5px; color: #97918a; font-weight: 600; }
+  .activity-list { flex: 1; overflow-y: auto; padding: 8px 14px 20px; }
+  .ev { display: flex; gap: 10px; padding: 11px 4px; border-bottom: 1px solid #efece5; cursor: pointer; }
+  .ev:hover { background: #f6f4ef; }
+  .ev .icon { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 4px; min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex: 0 0 22px; }
+  .ev .text { font-size: 12px; line-height: 1.45; color: #3a3630; }
+  .ev .meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .ev .rule { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: #ea580c; background: #fdf1e8; border-radius: 4px; padding: 1px 5px; }
+  .ev .when { font-size: 10px; color: #b0aaa1; }
+
+  /* ---------- page views (sources / automations / connection) ---------- */
+  .page-head { padding: 20px 30px 6px; }
+  .page-head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+  .page-head .sub { font-size: 13px; color: #8a847c; margin-top: 3px; }
+  .page-body { max-width: 1000px; padding: 18px 30px 40px; }
+  .sec-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #a8a29a; text-transform: uppercase; margin-bottom: 12px; }
+  .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 14px; }
+  .tool-card { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; padding: 16px; }
+  .tool-card .row1 { display: flex; align-items: center; gap: 12px; }
+  .tool-badge { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; border-radius: 9px; padding: 8px 9px; flex: 0 0 auto; }
+  .tool-card .nm { font-size: 14px; font-weight: 700; }
+  .tool-card .ds { font-size: 11.5px; color: #97918a; }
+  .pill { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; border-radius: 20px; padding: 3px 9px; white-space: nowrap; }
+  .pill .d { width: 6px; height: 6px; border-radius: 50%; }
+  .pill.ok { color: #16a34a; background: #e8f6ec; } .pill.ok .d { background: #16a34a; }
+  .pill.warn { color: #b45309; background: #fdf1e0; } .pill.warn .d { background: #d97706; }
+  .tool-card .scope { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0ede7; display: flex; align-items: center; gap: 8px; }
+  .tool-card .scope .k { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; color: #b0aaa1; text-transform: uppercase; flex: 0 0 auto; }
+  .tool-card .scope .v { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #57534e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .add-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 32px; }
+  .add-chip { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #78716c; background: #fff; border: 1.5px dashed #d9d5cd; border-radius: 10px; padding: 9px 13px; cursor: pointer; }
+  .add-chip:hover { border-color: #ea580c; color: #ea580c; }
+  .add-chip .short { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #a8a29a; }
+
+  .prompt-card { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+  .prompt-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; background: #faf8f5; border-bottom: 1px solid #eeebe4; }
+  .prompt-head .d { width: 7px; height: 7px; border-radius: 50%; background: #ea580c; flex: 0 0 7px; }
+  .prompt-head b { font-size: 12px; font-weight: 700; }
+  .prompt-head .meta { font-size: 11px; color: #97918a; margin-left: auto; }
+  .prompt-card textarea { width: 100%; min-height: 110px; resize: vertical; border: none; outline: none; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #3a3630; background: #fff; display: block; }
+  .prompt-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #faf8f5; border-top: 1px solid #eeebe4; }
+  .prompt-foot .last { font-size: 11.5px; color: #8a847c; }
+  .prompt-foot .last b { color: #3a3630; }
+  .prompt-foot .sp { flex: 1; }
+  .btn-sm { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  .btn-sm.ghost { color: #57534e; background: #fff; border: 1px solid #e7e3db; }
+  .btn-sm.ghost:hover { background: #f4f2ee; }
+  .btn-sm.accent { color: #fff; background: #ea580c; border: none; padding: 7px 14px; }
+  .btn-sm.accent:hover { background: #d24d0a; }
+  .chips { display: flex; gap: 4px; align-items: center; }
+  .tag-chip { font-size: 10.5px; font-weight: 600; color: #78716c; background: #eceae4; border-radius: 5px; padding: 1px 6px; }
+
+  .rule-card { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+  .rule-row1 { display: flex; align-items: center; gap: 10px; }
+  .lane-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #3a3630; background: #f4f2ee; border: 1px solid #e7e3db; border-radius: 7px; padding: 4px 9px; }
+  .lane-chip .d { width: 8px; height: 8px; border-radius: 3px; }
+  .rule-arrow { color: #c4bfb5; font-size: 14px; }
+  .rule-status { font-size: 11.5px; font-weight: 700; color: #15803d; margin-left: auto; }
+  .toggle { width: 34px; height: 20px; border-radius: 20px; background: #ea580c; position: relative; flex: 0 0 34px; }
+  .toggle i { position: absolute; top: 2px; left: 16px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .rule-row2 { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; }
+  .rule-row2 b { font-size: 13px; font-weight: 700; color: #26231f; }
+  .trig-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #ea580c; background: #fdf1e8; border-radius: 4px; padding: 1px 6px; }
+  .rule-action { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65; color: #57534e; background: #faf8f5; border: 1px solid #eeebe4; border-radius: 9px; padding: 12px 14px; word-break: break-all; }
+  .add-dashed { align-self: flex-start; font-size: 12.5px; font-weight: 600; color: #a8a29a; background: transparent; border: 1.5px dashed #d9d5cd; border-radius: 11px; padding: 12px 18px; cursor: pointer; }
+  .add-dashed:hover { border-color: #ea580c; color: #ea580c; }
+
+  .conn-card { display: flex; gap: 16px; background: #fff; border: 1px solid #e7e3db; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+  .conn-mark { width: 52px; height: 52px; border-radius: 13px; background: #1c1a17; display: flex; align-items: center; justify-content: center; flex: 0 0 52px; color: #ea580c; font-weight: 800; font-size: 18px; }
+  .conn-card .nm-row { display: flex; align-items: center; gap: 10px; }
+  .conn-card .nm { font-size: 16px; font-weight: 800; }
+  .conn-card .detail { font-size: 12.5px; color: #8a847c; margin-top: 3px; word-break: break-all; }
+  .conn-card .detail b { color: #3a3630; }
+  .stats { display: flex; gap: 22px; margin-top: 16px; }
+  .stat .n { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat .l { font-size: 11px; color: #97918a; font-weight: 600; }
+  .sess-list { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; overflow: hidden; }
+  .sess-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid #f0ede7; cursor: pointer; }
+  .sess-row:hover { background: #faf8f5; }
+  .sess-row:last-child { border-bottom: none; }
+  .sess-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+  .sess-row .t { font-size: 13px; font-weight: 600; color: #26231f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess-row .m { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #a8a29a; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess-row .st { font-size: 11.5px; font-weight: 600; flex: 0 0 auto; }
+  .sess-row .wh { font-size: 11px; color: #b0aaa1; width: 64px; text-align: right; flex: 0 0 64px; }
+
+  /* ---------- drawer ---------- */
+  #overlay { position: fixed; inset: 0; background: rgba(28,26,23,0.28); z-index: 40; backdrop-filter: blur(1.5px); display: none; }
+  #drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 92vw; background: #fbfaf8; border-left: 1px solid #e7e3db; z-index: 41; display: none; flex-direction: column; box-shadow: -16px 0 44px rgba(28,26,23,0.16); }
   #overlay.open { display: block; }
-  #drawer .head { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  #drawer .body { padding: 12px 16px; overflow-y: auto; flex: 1; }
-  #drawer .foot { padding: 12px 16px; border-top: 1px solid var(--border); }
-  #drawer h3 { margin: 4px 0 2px; font-size: 16px; }
-  .kv { font-size: 12.5px; color: var(--dim); margin: 2px 0; word-break: break-all; }
-  .kv a { color: var(--accent); text-decoration: none; }
-  .section { margin: 14px 0 4px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
-  .logline { font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
-  .logline .t { color: var(--dim); font-size: 11px; font-family: ui-monospace, monospace; }
-  .logline .k { color: var(--yellow); margin-right: 4px; }
-  .sess-line { font-size: 12.5px; font-family: ui-monospace, monospace; color: var(--cyan); padding: 2px 0; word-break: break-all; }
-  .sess-line span { color: var(--dim); font-family: inherit; }
-  textarea, input, select {
-    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
-    border-radius: 8px; padding: 7px 9px; font: inherit; margin-bottom: 8px;
-  }
-  textarea { resize: vertical; min-height: 64px; }
-  .row { display: flex; gap: 8px; }
-  .row > * { flex: 1; }
-  /* sources & connectors panel */
-  #setup { display: none; padding: 14px 16px 4px; border-bottom: 1px solid var(--border); background: #10141b; }
-  #setup.open { display: block; }
-  .setup-head {
-    display: flex; align-items: center; gap: 10px; margin: 4px 2px 10px;
-    font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em;
-  }
-  .setup-head .line { flex: 1; height: 1px; background: var(--border); }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 7px; }
-  .tile-top { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-  .dot { width: 9px; height: 9px; border-radius: 99px; background: #4a5468; flex: none; }
-  .dot.green { background: var(--green); }
-  .dot.yellow { background: var(--yellow); }
-  .tile .desc { font-size: 12.5px; color: var(--dim); }
-  .tile .detail { font-size: 11.5px; color: var(--dim); font-family: ui-monospace, monospace; word-break: break-all; }
-  .tile code {
-    display: block; font-size: 11px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px 8px; overflow-x: auto; white-space: nowrap; cursor: copy;
-  }
-  .tile .btns { display: flex; gap: 6px; margin-top: auto; }
-  .tile .btns button { font-size: 12px; padding: 4px 10px; }
-  .tile .prompt { font-size: 13px; font-style: italic; color: var(--text); }
-  .tile .chips { display: flex; flex-wrap: wrap; gap: 4px; }
-  .tile.add {
-    border-style: dashed; align-items: center; justify-content: center; color: var(--dim);
-    cursor: pointer; min-height: 110px; font-size: 13px;
-  }
-  .tile.add:hover { border-color: var(--accent); color: var(--accent); }
-  .run-ok { color: var(--green); font-size: 12px; }
-  .run-err { color: var(--red); font-size: 12px; }
-  .run-busy { color: var(--yellow); font-size: 12px; }
-  #toast {
-    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 16px; display: none; z-index: 20; max-width: 80vw;
-  }
-  #modal {
-    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 15;
-    background: rgba(0,0,0,.45);
-  }
-  #modal.open { display: flex; }
-  #modal .box {
-    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 18px; width: min(440px, 92vw);
-  }
-  #modal h3 { margin: 0 0 12px; }
+  #drawer.open { display: flex; }
+  .dw-head { padding: 18px 22px; border-bottom: 1px solid #e7e3db; }
+  .dw-chips { display: flex; align-items: center; gap: 8px; }
+  .dw-close { width: 28px; height: 28px; font-size: 15px; color: #8a847c; background: #f4f2ee; border: 1px solid #e7e3db; border-radius: 7px; cursor: pointer; margin-left: auto; }
+  .dw-close:hover { background: #ece9e2; }
+  .dw-title { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; margin-top: 12px; line-height: 1.3; }
+  .dw-meta { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+  .dw-meta .item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #78716c; font-weight: 500; }
+  .dw-meta .item .d { width: 8px; height: 8px; border-radius: 3px; }
+  .dw-meta .dim { font-size: 11.5px; color: #a8a29a; }
+  .dw-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+  .dw-desc { font-size: 12.5px; line-height: 1.6; color: #4a453f; background: #fff; border: 1px solid #eeebe4; border-radius: 11px; padding: 14px 16px; }
+  .dw-desc a { word-break: break-all; }
+  .dw-attn { font-size: 12.5px; line-height: 1.7; color: #b91c1c; background: #fbe9e6; border: 1px solid #f5d2cc; border-radius: 11px; padding: 12px 16px; margin-top: 12px; }
+  .dw-sec { display: flex; align-items: center; gap: 8px; margin: 22px 0 12px; }
+  .dw-sec .k { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: #78716c; text-transform: uppercase; }
+  .dw-sec .id { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #b0aaa1; }
+  .dw-sec .line { flex: 1; height: 1px; background: #eeebe4; }
+  .msgs { display: flex; flex-direction: column; gap: 10px; }
+  .msg { border-radius: 10px; padding: 10px 12px; border: 1px solid transparent; }
+  .msg .role { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+  .msg .txt { font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .msg.you { background: #fdf3ea; border-color: #f6dcc4; } .msg.you .role { color: #c2410c; } .msg.you .txt { color: #3a3630; }
+  .msg.agent { background: #fff; border-color: #eeebe4; } .msg.agent .role { color: #57534e; } .msg.agent .txt { color: #3a3630; }
+  .msg.system { background: transparent; } .msg.system .role { color: #a8a29a; } .msg.system .txt { color: #8a847c; }
+  .msg.tool { background: #1c1a17; border-color: #1c1a17; } .msg.tool .role { color: #f0a868; }
+  .msg.tool .txt { color: #d9d5cd; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .msg.source { background: #f4f2ee; border-color: #e7e3db; } .msg.source .role { color: #78716c; } .msg.source .txt { color: #57534e; }
+  .dw-foot { border-top: 1px solid #e7e3db; padding: 14px 18px; background: #fbfaf8; }
+  .composer { display: flex; align-items: flex-end; gap: 10px; background: #fff; border: 1px solid #e0dcd3; border-radius: 12px; padding: 8px 8px 8px 14px; }
+  .composer textarea { flex: 1; resize: none; border: none; outline: none; font-family: inherit; font-size: 13px; line-height: 1.5; color: #26231f; background: transparent; min-height: 22px; max-height: 120px; padding: 5px 0; }
+  .composer .send { font-size: 12.5px; font-weight: 700; color: #fff; background: #ea580c; border: none; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
+  .composer .send:hover { background: #d24d0a; }
+  .dw-caption { display: flex; align-items: center; font-size: 10.5px; color: #b0aaa1; margin-top: 7px; padding-left: 2px; }
+  .dw-caption .acts { margin-left: auto; display: flex; gap: 10px; }
+  .dw-caption .acts button { font-size: 10.5px; font-weight: 600; color: #8a847c; background: none; border: none; cursor: pointer; padding: 0; }
+  .dw-caption .acts button:hover { color: #ea580c; }
+
+  /* ---------- toasts ---------- */
+  #toasts { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  .toast { animation: toastIn 0.28s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: 11px; width: 340px; background: #1c1a17; color: #f4f2ee; border-radius: 12px; padding: 13px 15px; box-shadow: 0 12px 34px rgba(28,26,23,0.32); }
+  .toast .ic { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 7px; background: rgba(234,88,12,0.22); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .toast .hd { font-size: 12.5px; font-weight: 700; }
+  .toast .bd { font-size: 11.5px; color: #c9c4bc; line-height: 1.5; margin-top: 3px; word-break: break-word; }
+
+  /* ---------- modals ---------- */
+  .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 50; background: rgba(28,26,23,0.28); backdrop-filter: blur(1.5px); }
+  .modal.open { display: flex; }
+  .modal .box { background: #fbfaf8; border: 1px solid #e7e3db; border-radius: 16px; padding: 20px; width: min(520px, 92vw); box-shadow: 0 24px 60px rgba(28,26,23,0.22); }
+  .modal h3 { margin: 0 0 14px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+  .modal input, .modal textarea, .modal select { width: 100%; background: #fff; color: #26231f; border: 1px solid #e0dcd3; border-radius: 9px; padding: 8px 11px; font-family: inherit; font-size: 13px; margin-bottom: 9px; outline: none; }
+  .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: #ea580c; }
+  .modal textarea { resize: vertical; min-height: 74px; }
+  .modal .row { display: flex; gap: 9px; }
+  .modal .row > * { flex: 1; }
+  .modal label.cb { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: #57534e; font-weight: 500; margin: 0 10px 9px 0; }
+  .modal label.cb input { width: auto; margin: 0; }
 </style>
 </head>
 <body>
-<header>
-  <h1 id="board-name">mini-board</h1>
-  <span class="pill" id="att-pill">…</span>
-  <span class="spacer"></span>
-  <button id="btn-setup">Sources</button>
-  <button id="btn-add">+ Card</button>
-  <button id="btn-sync">Sync PRs</button>
-</header>
+<div class="app">
+  <aside class="side">
+    <div class="logo">
+      <div class="logo-mark"><span class="logo-bars"><i style="height:8px"></i><i style="height:13px"></i><i style="height:6px"></i></span></div>
+      <div>
+        <div class="logo-name" id="side-name">mini-board</div>
+        <div class="logo-sub">mini-board</div>
+      </div>
+    </div>
+    <div class="side-label">Workspace</div>
+    <button class="nav-btn" data-view="board"><span class="glyph">▦</span><span class="lbl">Board</span><span class="badge" id="nav-badge-board">0</span></button>
+    <button class="nav-btn" data-view="sources"><span class="glyph">◎</span><span class="lbl">Sources</span><span class="badge" id="nav-badge-sources">0</span></button>
+    <button class="nav-btn" data-view="automations"><span class="glyph">◆</span><span class="lbl">Automations</span></button>
+    <button class="nav-btn" data-view="connection"><span class="glyph">●</span><span class="lbl">Connection</span></button>
+    <div style="flex:1"></div>
+    <div class="claude-card">
+      <div class="row1"><span class="dot off" id="claude-dot"></span><b id="claude-lbl">Claude</b></div>
+      <div class="sub" id="claude-sub">status unknown — re-check</div>
+      <button data-view="connection" class="nav-go">Manage connection</button>
+    </div>
+  </aside>
 
-<section id="setup">
-  <div class="setup-head">Connectors — wire these up once <span class="line"></span>
-    <button id="btn-check">Re-check</button></div>
-  <div class="tiles" id="connector-tiles"></div>
-  <div class="setup-head">Sources — prompts that pull cards onto the board <span class="line"></span></div>
-  <div class="tiles" id="source-tiles"></div>
-</section>
+  <main class="main">
+    <!-- BOARD -->
+    <div class="view active" id="view-board">
+      <header class="board-head">
+        <div>
+          <h1 id="board-title">Ticket Flow</h1>
+          <div class="sub">Sources feed the board · drag to run automations</div>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-accent" id="btn-run-sources"><span class="dot"></span>Run sources</button>
+        <button class="btn btn-ghost" id="btn-add-card">+ Card</button>
+        <button class="btn btn-ghost" id="btn-activity">Activity</button>
+      </header>
+      <div class="board-body">
+        <div class="lanes-scroll"><div class="lanes" id="lanes"></div></div>
+        <aside class="activity" id="activity">
+          <div class="activity-head"><b>Automation activity</b><span class="live-dot"></span><span class="live">Live</span></div>
+          <div class="activity-list" id="activity-list"></div>
+        </aside>
+      </div>
+    </div>
 
-<main id="main"></main>
+    <!-- SOURCES -->
+    <div class="view scroll" id="view-sources">
+      <header class="page-head">
+        <h1>Sources</h1>
+        <div class="sub">Connect MCP tools, then tell Claude what to pull. Matches become cards on the board.</div>
+      </header>
+      <div class="page-body">
+        <div class="sec-label">Connected tools</div>
+        <div class="tool-grid" id="tool-grid"></div>
+        <div class="add-row" id="tool-add-row"></div>
+        <div class="sec-label">Source prompts</div>
+        <div id="prompt-cards"></div>
+        <button class="add-dashed" id="btn-new-source">+ New source</button>
+      </div>
+    </div>
 
+    <!-- AUTOMATIONS -->
+    <div class="view scroll" id="view-automations">
+      <header class="page-head">
+        <h1>Automations</h1>
+        <div class="sub">When a card crosses a lane boundary, its actions run. Order follows the board, left to right.</div>
+      </header>
+      <div class="page-body" style="max-width:920px; display:flex; flex-direction:column;">
+        <div id="rule-cards" style="display:flex; flex-direction:column;"></div>
+        <button class="add-dashed" id="btn-add-rule">+ Add automation</button>
+      </div>
+    </div>
+
+    <!-- CONNECTION -->
+    <div class="view scroll" id="view-connection">
+      <header class="page-head">
+        <h1>Connection</h1>
+        <div class="sub">mini-board runs on your Claude account. Sessions execute the automations and can be messaged directly.</div>
+      </header>
+      <div class="page-body" style="max-width:900px">
+        <div class="conn-card">
+          <div class="conn-mark">✳</div>
+          <div style="flex:1">
+            <div class="nm-row"><span class="nm">Claude</span><span id="conn-pill"></span></div>
+            <div class="detail" id="conn-detail">—</div>
+            <div class="stats">
+              <div class="stat"><div class="n" id="stat-sessions">0</div><div class="l">Sessions</div></div>
+              <div class="stat"><div class="n" id="stat-runs">0</div><div class="l">Runs today</div></div>
+              <div class="stat"><div class="n" id="stat-cards">0</div><div class="l">Cards</div></div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; align-self:flex-start">
+            <button class="btn-sm ghost" id="btn-verify">Verify auth</button>
+            <button class="btn-sm ghost" id="btn-recheck">Re-check</button>
+          </div>
+        </div>
+        <div class="sec-label">Sessions</div>
+        <div class="sess-list" id="sess-list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- TICKET DRAWER -->
 <div id="overlay"></div>
-<aside id="drawer">
-  <div class="head">
-    <div class="id kv" id="d-id"></div>
-    <h3 id="d-title"></h3>
-    <div class="kv" id="d-sub"></div>
+<div id="drawer">
+  <div class="dw-head">
+    <div class="dw-chips" id="dw-chips"></div>
+    <div class="dw-title" id="dw-title"></div>
+    <div class="dw-meta" id="dw-meta"></div>
   </div>
-  <div class="body" id="d-body"></div>
-  <div class="foot">
-    <textarea id="d-comment" placeholder="Leave a comment… (Fire sends it into the card's latest Claude session)"></textarea>
-    <div class="row">
-      <button id="d-btn-comment">Comment</button>
-      <button id="d-btn-fire" class="primary">Fire to session ⚡</button>
-      <button id="d-btn-agent">New agent 🤖</button>
+  <div class="dw-body">
+    <div class="dw-desc" id="dw-desc"></div>
+    <div id="dw-attn"></div>
+    <div class="dw-sec"><span class="k">Claude session</span><span class="id" id="dw-sess-id"></span><span class="line"></span></div>
+    <div class="msgs" id="dw-msgs"></div>
+  </div>
+  <div class="dw-foot">
+    <div class="composer">
+      <textarea id="dw-input" spellcheck="false" placeholder="Message this session…"></textarea>
+      <button class="send" id="dw-send">Send</button>
     </div>
-    <div class="row" style="margin-top:8px">
-      <button id="d-btn-flag">Flag</button>
-      <button id="d-btn-unflag">Clear flags</button>
-      <button id="d-btn-archive" class="danger">Archive</button>
+    <div class="dw-caption">
+      <span>Messages are injected into the live agent session for this card.</span>
+      <span class="acts">
+        <button id="dw-comment">Comment only</button>
+        <button id="dw-agent">New agent</button>
+        <button id="dw-flag">Flag</button>
+        <button id="dw-archive">Archive</button>
+      </span>
     </div>
   </div>
-</aside>
+</div>
 
-<div id="modal">
+<!-- ADD CARD MODAL -->
+<div class="modal" id="modal-card">
   <div class="box">
     <h3>New card</h3>
     <input id="m-title" placeholder="Title" />
@@ -213,52 +412,71 @@
     <input id="m-slack" placeholder="Slack thread URL" />
     <textarea id="m-note" placeholder="First note (optional)"></textarea>
     <div class="row">
-      <button id="m-cancel">Cancel</button>
-      <button id="m-save" class="primary">Add</button>
+      <button class="btn-sm ghost" id="m-cancel">Cancel</button>
+      <button class="btn-sm accent" id="m-save">Add</button>
     </div>
   </div>
 </div>
 
-<div id="modal-src" class="" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:15;background:rgba(0,0,0,.45)">
-  <div class="box" style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:min(520px,92vw)">
-    <h3 id="s-heading" style="margin:0 0 12px">New source</h3>
+<!-- SOURCE MODAL -->
+<div class="modal" id="modal-src">
+  <div class="box">
+    <h3 id="s-heading">New source</h3>
     <input id="s-title" placeholder="Title (e.g. Slack user feedback)" />
-    <textarea id="s-prompt" placeholder='Prompt — e.g. "Look at the #user-feedback channel in Slack and find issues reported in the past 24 hours" or "List open PRs where my review is requested"'></textarea>
-    <div class="row" style="margin-bottom:8px">
-      <label style="flex:2;font-size:12.5px;color:var(--dim)">Tools:
-        <span id="s-tools" style="display:inline-flex;gap:10px;flex-wrap:wrap;margin-left:6px">
-          <label><input type="checkbox" style="width:auto" value="slack"> slack</label>
-          <label><input type="checkbox" style="width:auto" value="atlassian"> atlassian</label>
-          <label><input type="checkbox" style="width:auto" value="gdrive"> gdrive</label>
-          <label><input type="checkbox" style="width:auto" value="github"> github (gh)</label>
-          <label><input type="checkbox" style="width:auto" value="web"> web search</label>
-        </span>
-      </label>
-      <select id="s-col" style="flex:1"></select>
+    <textarea id="s-prompt" placeholder='Prompt — e.g. "Look at the #user-feedback channel in Slack and find issues reported in the past 24 hours"'></textarea>
+    <div id="s-tools" style="margin-bottom:4px">
+      <label class="cb"><input type="checkbox" value="slack"> slack</label>
+      <label class="cb"><input type="checkbox" value="atlassian"> atlassian</label>
+      <label class="cb"><input type="checkbox" value="gdrive"> gdrive</label>
+      <label class="cb"><input type="checkbox" value="github"> github (gh)</label>
+      <label class="cb"><input type="checkbox" value="web"> web search</label>
     </div>
+    <select id="s-col"></select>
     <div class="row">
-      <button id="s-cancel">Cancel</button>
-      <button id="s-save" class="primary">Save to board.yml</button>
+      <button class="btn-sm ghost" id="s-cancel">Cancel</button>
+      <button class="btn-sm accent" id="s-save">Save to board.yml</button>
     </div>
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toasts"></div>
 
 <script>
 let DATA = null;
+let VIEW = 'board';
 let openCardId = null;
+let showActivity = true;
+let editingSourceId = null;
+let dragId = null;
 
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
-function toast(msg, ms = 2600) {
-  const el = $('#toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => (el.style.display = 'none'), ms);
+const TYPE_META = {
+  pr:     { label: 'PR',     color: '#6d28d9', bg: '#f0eafb' },
+  ticket: { label: 'Ticket', color: '#1d4ed8', bg: '#e8eefc' },
+  slack:  { label: 'Slack',  color: '#0f766e', bg: '#e2f4f1' },
+  task:   { label: 'Task',   color: '#57534e', bg: '#eceae4' },
+};
+const SRC_META = {
+  slack:  { short: 'SL', color: '#6b2d75', bg: '#f1e9f3' },
+  github: { short: 'GH', color: '#2b2b30', bg: '#ecebe8' },
+  jira:   { short: 'JR', color: '#1d4ed8', bg: '#e8eefc' },
+  other:  { short: '◎',  color: '#9a3412', bg: '#fdece0' },
+};
+
+function age(iso) {
+  const ms = Date.now() - Date.parse(iso);
+  if (!isFinite(ms) || ms < 60e3) return 'now';
+  if (ms < 36e5) return Math.floor(ms / 6e4) + 'm';
+  if (ms < 864e5) return Math.floor(ms / 36e5) + 'h';
+  return Math.floor(ms / 864e5) + 'd';
+}
+function ago(iso) {
+  const a = age(iso);
+  return a === 'now' ? 'just now' : a + ' ago';
 }
 
 async function api(path, body) {
@@ -266,282 +484,353 @@ async function api(path, body) {
     ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
     : undefined);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  if (!res.ok) throw new Error(data.error || data.detail || res.statusText);
   return data;
 }
 
-function age(iso) {
-  const ms = Date.now() - Date.parse(iso);
-  if (ms < 60e3) return 'now';
-  if (ms < 36e5) return Math.floor(ms / 6e4) + 'm';
-  if (ms < 864e5) return Math.floor(ms / 36e5) + 'h';
-  return Math.floor(ms / 864e5) + 'd';
+function toast(head, body, ms = 5200) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span class="ic">⚡</span><div style="flex:1;min-width:0"><div class="hd">${esc(head)}</div>${body ? `<div class="bd">${esc(body)}</div>` : ''}</div>`;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), ms);
 }
 
-function prTags(card) {
-  const tags = [];
-  if (card.refs?.pr) {
-    const pr = card.pr_state;
-    if (!pr) tags.push('<span class="tag pr-open">PR</span>');
-    else if (pr.state === 'MERGED') tags.push('<span class="tag pr-merged">PR merged</span>');
-    else if (pr.state === 'CLOSED') tags.push('<span class="tag pr-closed">PR closed</span>');
-    else {
-      tags.push(`<span class="tag pr-open">PR${pr.draft ? ' draft' : ''}</span>`);
-      if (pr.checks === 'failing') tags.push('<span class="tag bad">ci ✗</span>');
-      else if (pr.checks === 'passing') tags.push('<span class="tag ok">ci ✓</span>');
-      else if (pr.checks === 'pending') tags.push('<span class="tag pend">ci …</span>');
-      if (pr.review === 'APPROVED') tags.push('<span class="tag ok">approved</span>');
-      if (pr.review === 'CHANGES_REQUESTED') tags.push('<span class="tag bad">changes req</span>');
-    }
-  }
-  if (card.refs?.ticket) tags.push(`<span class="tag">${esc(card.refs.ticket)}</span>`);
-  if (card.refs?.slack) tags.push('<span class="tag">slack</span>');
-  if (card.sessions?.length) tags.push(`<span class="tag sess">⚡ ${card.sessions.length}</span>`);
-  tags.push(`<span class="tag">${age(card.updated)}</span>`);
-  return tags.join('');
+/* ---------- card decoration ---------- */
+function cardRef(c) {
+  if (c.refs?.ticket) return c.refs.ticket;
+  if (c.refs?.pr) { const m = /(\d+)\s*$/.exec(c.refs.pr); return m ? '#' + m[1] : 'PR'; }
+  return c.id;
+}
+function srcMeta(c) {
+  if (c.type === 'slack' || c.refs?.slack) return SRC_META.slack;
+  if (c.type === 'pr' || c.refs?.pr) return SRC_META.github;
+  if (c.type === 'ticket' || c.refs?.ticket) return SRC_META.jira;
+  if (c.origin) return { ...SRC_META.other, short: c.origin.source.slice(0, 2).toUpperCase() };
+  return null;
+}
+function cardStatus(c) {
+  const attn = (c.attention || []).length;
+  if (attn) return { dot: '#b91c1c', pulse: true, label: `Needs attention · ${attn}`, text: '#b91c1c' };
+  if (c.pending_session_logs?.length) return { dot: '#ea580c', pulse: true, label: 'Agent working', text: '#c2410c' };
+  if (c.pr_state?.checks === 'pending') return { dot: '#7c3aed', pulse: true, label: 'CI running', text: '#6d28d9' };
+  if (c.sessions?.length) return { dot: '#0d9488', pulse: false, label: `${c.sessions.length} session${c.sessions.length === 1 ? '' : 's'}`, text: '#0f766e' };
+  return null;
 }
 
-function cardHtml(card) {
-  const att = card.attention || [];
-  return `<div class="card" draggable="true" data-id="${card.id}">
-    ${att.length ? `<div class="att-dot">${att.length}</div>` : ''}
-    <div class="id">${card.id}</div>
-    <div class="title">${esc(card.title)}</div>
-    <div class="meta">${prTags(card)}</div>
-    ${att.length ? `<div class="att-reasons">${att.slice(0, 3).map((a) => `<div>⚠ ${esc(a.reason)}</div>`).join('')}</div>` : ''}
+function ticketHtml(c) {
+  const tm = TYPE_META[c.type] || TYPE_META.task;
+  const sm = srcMeta(c);
+  const st = cardStatus(c);
+  return `<div class="ticket${dragId === c.id ? ' dragging' : ''}" draggable="true" data-id="${c.id}">
+    <div class="top">
+      <span class="type-chip" style="color:${tm.color};background:${tm.bg}">${tm.label}</span>
+      ${sm ? `<span class="src-badge" style="color:${sm.color};background:${sm.bg}">${esc(sm.short)}</span>` : ''}
+      <span class="ref">${esc(cardRef(c))}</span>
+    </div>
+    <div class="title">${esc(c.title)}</div>
+    <div class="foot">
+      ${st ? `<span class="status-dot${st.pulse ? ' pulse' : ''}" style="background:${st.dot}"></span><span class="status-lbl" style="color:${st.text}">${esc(st.label)}</span>` : ''}
+      <span class="when">${age(c.updated)}</span>
+    </div>
   </div>`;
 }
 
-function render() {
+/* ---------- board ---------- */
+function renderBoard() {
   const { board, cards } = DATA;
-  document.title = board.name;
-  $('#board-name').textContent = board.name;
-  const pill = $('#att-pill');
-  pill.textContent = DATA.attention_count ? `⚠ ${DATA.attention_count} need attention` : 'all clear ✨';
-  pill.className = 'pill' + (DATA.attention_count ? ' warn' : '');
+  $('#lanes').innerHTML = board.columns.map((col) => {
+    const laneCards = cards.filter((c) => c.column === col.id);
+    const auto = col.on_enter?.[0];
+    return `<div class="lane">
+      <div class="lane-head">
+        <span class="lane-dot" style="background:${col.accent}"></span>
+        <span class="lane-name">${esc(col.title)}</span>
+        <span class="lane-count">${laneCards.length}</span>
+      </div>
+      ${auto ? `<div class="lane-auto"><span class="k">⚡ ON ENTER</span><span class="v">${esc(auto.name)}</span></div>` : ''}
+      <div class="lane-body" data-lane="${col.id}">${laneCards.map(ticketHtml).join('')}</div>
+    </div>`;
+  }).join('') + `<button class="add-lane" id="btn-add-lane">+ Add lane</button>`;
 
-  const groupBy = board.group_by;
-  const lanes = groupBy === 'none'
-    ? ['']
-    : [...new Set(cards.map((c) => String(c[groupBy] ?? 'other')))].sort();
-
-  const main = $('#main');
-  main.innerHTML = lanes.map((lane) => {
-    const laneCards = lane === '' ? cards : cards.filter((c) => String(c[groupBy] ?? 'other') === lane);
-    return `
-      ${lane ? `<div class="lane-label">${esc(lane)}</div>` : ''}
-      <div class="columns">
-        ${board.columns.map((col) => {
-          const colCards = laneCards.filter((c) => c.column === col.id);
-          return `<div class="col" data-col="${col.id}" data-lane="${esc(lane)}">
-            <h2><span>${esc(col.title)}</span><span>${colCards.length}</span></h2>
-            ${colCards.map(cardHtml).join('')}
-          </div>`;
-        }).join('')}
-      </div>`;
-  }).join('');
-
-  // column select in the add-modal
-  $('#m-col').innerHTML = board.columns
-    .map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
-
-  wireDnd();
-  main.querySelectorAll('.card').forEach((el) => {
+  $$('#lanes .ticket').forEach((el) => {
     el.addEventListener('click', () => openDrawer(el.dataset.id));
-  });
-  if (openCardId) fillDrawer(openCardId);
-  renderSetup();
-}
-
-function connectorTile(c) {
-  const s = c.status || {};
-  const dot = s.connected ? 'green' : s.configured ? 'yellow' : '';
-  const detail = s.detail || 'unchecked — hit Re-check';
-  const sess = c.id === 'claude' && c.sessions
-    ? `<div class="detail">⚡ ${c.sessions} session(s) across ${c.session_cards} card(s)</div>` : '';
-  return `<div class="tile" data-conn="${c.id}">
-    <div class="tile-top"><span class="dot ${dot}"></span>${esc(c.title)}</div>
-    <div class="desc">${esc(c.description)}</div>
-    <div class="detail">${esc(detail)}</div>
-    ${sess}
-    ${c.setup ? `<code title="click to copy">${esc(c.setup)}</code>` : ''}
-    ${c.needs_env?.length ? `<div class="detail">needs env: ${c.needs_env.map(esc).join(', ')}</div>` : ''}
-    <div class="btns">
-      ${c.id === 'claude' ? '<button data-act="verify">Verify auth</button>' : ''}
-      ${!s.connected && c.instructions ? `<button data-act="how">How?</button>` : ''}
-    </div>
-  </div>`;
-}
-
-function sourceTile(s) {
-  const st = s.status || {};
-  const run = s.pulling || st.last_status === 'running'
-    ? '<span class="run-busy">⏳ pulling… (cards land on refresh)</span>'
-    : st.last_status === 'ok' ? `<span class="run-ok">✓ ${esc(st.last_summary || 'ok')}</span>`
-    : st.last_status === 'error' ? `<span class="run-err">✗ ${esc(st.last_summary || 'error')}</span>`
-    : '<span class="detail">never run</span>';
-  return `<div class="tile src" data-src="${esc(s.id)}">
-    <div class="tile-top">${esc(s.title)} <span class="detail" style="margin-left:auto">→ ${esc(s.column)}</span></div>
-    <div class="prompt">“${esc(s.prompt)}”</div>
-    <div class="chips">${(s.tools || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('') || '<span class="detail">no tools</span>'}</div>
-    <div>${run}</div>
-    <div class="btns">
-      <button data-act="pull" class="primary" ${s.pulling ? 'disabled' : ''}>Pull now</button>
-      <button data-act="edit">Edit</button>
-    </div>
-  </div>`;
-}
-
-function renderSetup() {
-  const setup = DATA.setup;
-  if (!setup) return;
-  $('#connector-tiles').innerHTML = setup.connectors.map(connectorTile).join('');
-  $('#source-tiles').innerHTML =
-    setup.sources.map(sourceTile).join('') +
-    '<div class="tile add" id="tile-add-src">+ New source</div>';
-
-  document.querySelectorAll('#connector-tiles code').forEach((el) => {
-    el.addEventListener('click', () => {
-      navigator.clipboard?.writeText(el.textContent);
-      toast('setup command copied — run it in your terminal, then Re-check');
-    });
-  });
-  document.querySelectorAll('#connector-tiles [data-act]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = btn.closest('.tile').dataset.conn;
-      const conn = setup.connectors.find((c) => c.id === id);
-      if (btn.dataset.act === 'how') { alert(conn.instructions || 'no instructions'); return; }
-      if (btn.dataset.act === 'verify') {
-        btn.disabled = true; btn.textContent = 'Verifying…';
-        try {
-          const res = await api('/api/connectors/verify', {});
-          DATA = res; render();
-          toast(res.ok ? '✓ Claude auth works' : 'verify failed: ' + res.detail, 5000);
-        } catch (err) { toast('verify failed: ' + err.message, 5000); render(); }
-      }
-    });
-  });
-  document.querySelectorAll('#source-tiles [data-act]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = btn.closest('.tile').dataset.src;
-      if (btn.dataset.act === 'edit') { openSourceModal(setup.sources.find((s) => s.id === id)); return; }
-      if (btn.dataset.act === 'pull') {
-        btn.disabled = true;
-        try {
-          const res = await api('/api/source/pull', { source: id });
-          DATA = res; render();
-          toast('pull started — Claude is scanning with the source tools; new cards appear when it finishes');
-        } catch (err) { toast('pull failed: ' + err.message, 5000); btn.disabled = false; }
-      }
-    });
-  });
-  const addTile = $('#tile-add-src');
-  if (addTile) addTile.addEventListener('click', () => openSourceModal(null));
-}
-
-let editingSourceId = null;
-function openSourceModal(src) {
-  editingSourceId = src?.id ?? null;
-  $('#s-heading').textContent = src ? `Edit source: ${src.id}` : 'New source';
-  $('#s-title').value = src?.title ?? '';
-  $('#s-prompt').value = src?.prompt ?? '';
-  $('#s-col').innerHTML = DATA.board.columns.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
-  if (src?.column) $('#s-col').value = src.column;
-  document.querySelectorAll('#s-tools input').forEach((cb) => {
-    cb.checked = (src?.tools ?? []).includes(cb.value);
-  });
-  $('#modal-src').style.display = 'flex';
-}
-$('#s-cancel').addEventListener('click', () => { $('#modal-src').style.display = 'none'; });
-$('#s-save').addEventListener('click', async () => {
-  const title = $('#s-title').value.trim();
-  const prompt = $('#s-prompt').value.trim();
-  if (!prompt) return toast('prompt required');
-  const tools = [...document.querySelectorAll('#s-tools input:checked')].map((cb) => cb.value);
-  const id = editingSourceId || (title || 'source').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  try {
-    const res = await api('/api/source/save', {
-      id, title: title || id, prompt, tools, column: $('#s-col').value,
-    });
-    DATA = res; render();
-    $('#modal-src').style.display = 'none';
-    toast(`source "${id}" saved to board.yml`);
-  } catch (err) { toast('save failed: ' + err.message, 5000); }
-});
-$('#btn-setup').addEventListener('click', () => $('#setup').classList.toggle('open'));
-$('#btn-check').addEventListener('click', async () => {
-  const btn = $('#btn-check');
-  btn.disabled = true; btn.textContent = 'Checking…';
-  try {
-    const res = await api('/api/connectors/check', {});
-    DATA = res; render();
-    toast('connector status refreshed');
-  } catch (err) { toast('check failed: ' + err.message, 5000); }
-  btn.disabled = false; btn.textContent = 'Re-check';
-});
-
-function wireDnd() {
-  document.querySelectorAll('.card').forEach((el) => {
     el.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', el.dataset.id);
-      e.dataTransfer.effectAllowed = 'move';
+      dragId = el.dataset.id;
+      el.classList.add('dragging');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId); } catch {}
     });
+    el.addEventListener('dragend', () => { dragId = null; $$('.lane-body').forEach((l) => l.classList.remove('over')); render(); });
   });
-  document.querySelectorAll('.col').forEach((col) => {
-    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drag-over'); });
-    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
-    col.addEventListener('drop', async (e) => {
+  $$('#lanes .lane-body').forEach((lane) => {
+    lane.addEventListener('dragover', (e) => { e.preventDefault(); try { e.dataTransfer.dropEffect = 'move'; } catch {} lane.classList.add('over'); });
+    lane.addEventListener('dragleave', () => lane.classList.remove('over'));
+    lane.addEventListener('drop', async (e) => {
       e.preventDefault();
-      col.classList.remove('drag-over');
-      const id = e.dataTransfer.getData('text/plain');
-      const target = col.dataset.col;
+      lane.classList.remove('over');
+      const id = dragId; dragId = null;
+      const target = lane.dataset.lane;
       const card = DATA.cards.find((c) => c.id === id);
       if (!card || card.column === target) return;
       try {
         const res = await api('/api/move', { card: id, column: target });
-        DATA = res;
-        render();
+        DATA = res; render();
         const acts = (res.actions || []).filter(Boolean);
+        const col = DATA.board.columns.find((c) => c.id === target);
+        const ruleName = col?.on_enter?.[0]?.name;
         if (acts.length) {
           const bad = acts.find((a) => a.error || a.ok === false);
-          toast(bad ? `moved, but action failed: ${bad.error || bad.cmd}` : `moved → ${target} · fired ${acts.length} action(s)`);
-        } else toast(`moved → ${target}`);
-      } catch (err) { toast('move failed: ' + err.message); }
+          if (bad) toast('Automation failed', bad.error || bad.cmd);
+          else toast(`Automation fired · ${ruleName || 'on enter'}`, `“${card.title}” — ${acts[0].background ? 'agent launched in background' : 'action ran'}.`);
+        }
+      } catch (err) { toast('Move failed', err.message); }
+    });
+  });
+  const addLane = $('#btn-add-lane');
+  if (addLane) addLane.addEventListener('click', () =>
+    toast('Lanes live in board.yml', 'Add a column under columns: — the board picks it up on refresh.'));
+}
+
+/* ---------- activity ---------- */
+const EV_META = {
+  action:  { icon: '⚡', color: '#ea580c', bg: '#fdf1e8' },
+  source:  { icon: 'SRC', color: '#78716c', bg: '#eceae4' },
+  sync:    { icon: 'CI', color: '#6d28d9', bg: '#f0eafb' },
+  session: { icon: '✳', color: '#15803d', bg: '#e8f6ec' },
+  comment: { icon: '✎', color: '#78716c', bg: '#eceae4' },
+  move:    { icon: '→', color: '#78716c', bg: '#eceae4' },
+  flag:    { icon: '!', color: '#b91c1c', bg: '#fbe9e6' },
+};
+function renderActivity() {
+  const events = [];
+  for (const c of DATA.cards) {
+    for (const e of c.log || []) {
+      if (e.kind === 'create' || e.kind === 'update' || e.kind === 'archive') continue;
+      events.push({ ...e, cardId: c.id, cardTitle: c.title });
+    }
+  }
+  events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  $('#activity-list').innerHTML = events.slice(0, 40).map((e) => {
+    const m = EV_META[e.kind] || EV_META.move;
+    return `<div class="ev" data-card="${e.cardId}">
+      <span class="icon" style="color:${m.color};background:${m.bg}">${m.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div class="text">${esc(e.text)} — “${esc(e.cardTitle)}”</div>
+        <div class="meta"><span class="rule">${e.cardId}</span><span class="when">${ago(e.at)}</span></div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="padding:16px 4px;font-size:12px;color:#a8a29a">No activity yet — pull a source or move a card.</div>';
+  $$('#activity-list .ev').forEach((el) => el.addEventListener('click', () => openDrawer(el.dataset.card)));
+}
+
+/* ---------- sources page ---------- */
+function renderSources() {
+  const setup = DATA.setup;
+  const configured = setup.connectors.filter((c) => c.status?.configured);
+  const missing = setup.connectors.filter((c) => !c.status?.configured);
+
+  $('#tool-grid').innerHTML = configured.map((c) => {
+    const ok = c.status?.connected;
+    return `<div class="tool-card">
+      <div class="row1">
+        <span class="tool-badge" style="color:${ok ? '#2b2b30' : '#9a3412'};background:${ok ? '#ecebe8' : '#fdece0'}">${esc(c.id.slice(0, 2).toUpperCase())}</span>
+        <div style="flex:1;min-width:0">
+          <div class="nm">${esc(c.title)}</div>
+          <div class="ds">${esc(c.description || '')}</div>
+        </div>
+        <span class="pill ${ok ? 'ok' : 'warn'}"><span class="d"></span>${ok ? 'Connected' : 'Configured'}</span>
+      </div>
+      <div class="scope"><span class="k">Status</span><span class="v" title="${esc(c.status?.detail || '')}">${esc(c.status?.detail || '—')}</span></div>
+    </div>`;
+  }).join('') || '<div style="font-size:12.5px;color:#a8a29a">Nothing detected yet — hit Re-check on the Connection page.</div>';
+
+  $('#tool-add-row').innerHTML = missing.map((c) =>
+    `<button class="add-chip" data-conn="${c.id}"><span class="short">${esc(c.id.slice(0, 2).toUpperCase())}</span>+ ${esc(c.title)}</button>`,
+  ).join('');
+  $$('#tool-add-row .add-chip').forEach((btn) => btn.addEventListener('click', () => {
+    const c = setup.connectors.find((x) => x.id === btn.dataset.conn);
+    const cmd = c.setup ? `\n\n${c.setup}` : '';
+    if (c.setup && navigator.clipboard) navigator.clipboard.writeText(c.setup);
+    alert(`${c.title}\n\n${c.instructions || ''}${cmd}${c.setup ? '\n\n(setup command copied to clipboard — run it in your terminal, then Re-check)' : ''}`);
+  }));
+
+  $('#prompt-cards').innerHTML = setup.sources.map((s) => {
+    const st = s.status || {};
+    const busy = s.pulling || st.last_status === 'running';
+    const last = busy ? '⏳ pulling — cards land on refresh'
+      : st.last_status === 'ok' ? `Last run: <b>${esc(st.last_summary || 'ok')}</b> · ${ago(st.last_run)}`
+      : st.last_status === 'error' ? `<span style="color:#b91c1c">Last run failed: ${esc(st.last_summary || 'error')}</span>`
+      : 'Never run';
+    return `<div class="prompt-card" data-src="${esc(s.id)}">
+      <div class="prompt-head">
+        <span class="d"></span><b>${esc(s.title)}</b>
+        <span class="chips" style="margin-left:6px">${(s.tools || []).map((t) => `<span class="tag-chip">${esc(t)}</span>`).join('')}</span>
+        <span class="meta">→ ${esc(s.column)} · on demand (mb pull)</span>
+      </div>
+      <textarea spellcheck="false" data-orig="${esc(s.prompt)}">${esc(s.prompt)}</textarea>
+      <div class="prompt-foot">
+        <span class="last">${last}</span>
+        <span class="sp"></span>
+        <button class="btn-sm ghost" data-act="edit">Edit</button>
+        <button class="btn-sm ghost" data-act="save" style="display:none">Save prompt</button>
+        <button class="btn-sm accent" data-act="run" ${busy ? 'disabled' : ''}>Run now</button>
+      </div>
+    </div>`;
+  }).join('') || '<div style="font-size:12.5px;color:#a8a29a;margin-bottom:14px">No sources yet — add one below.</div>';
+
+  $$('#prompt-cards .prompt-card').forEach((cardEl) => {
+    const id = cardEl.dataset.src;
+    const ta = cardEl.querySelector('textarea');
+    const saveBtn = cardEl.querySelector('[data-act="save"]');
+    ta.addEventListener('input', () => { saveBtn.style.display = ta.value.trim() !== ta.dataset.orig ? '' : 'none'; });
+    saveBtn.addEventListener('click', async () => {
+      const s = DATA.setup.sources.find((x) => x.id === id);
+      try {
+        DATA = await api('/api/source/save', { ...s, prompt: ta.value.trim() });
+        render();
+        toast('Source saved', `“${id}” updated in board.yml`);
+      } catch (err) { toast('Save failed', err.message); }
+    });
+    cardEl.querySelector('[data-act="edit"]').addEventListener('click', () =>
+      openSourceModal(DATA.setup.sources.find((x) => x.id === id)));
+    cardEl.querySelector('[data-act="run"]').addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      try {
+        DATA = await api('/api/source/pull', { source: id });
+        render();
+        toast('Source scan started', `Claude is scanning “${id}” with its tools — new cards appear when it finishes.`);
+      } catch (err) { toast('Pull failed', err.message); render(); }
     });
   });
 }
 
-function refLink(label, url) {
-  if (!url) return '';
-  const href = /^https?:/.test(url) ? url : null;
-  return `<div class="kv">${label}: ${href ? `<a href="${esc(href)}" target="_blank">${esc(url)}</a>` : esc(url)}</div>`;
+/* ---------- automations page ---------- */
+function renderAutomations() {
+  const cols = DATA.board.columns;
+  const anyChip = `<span class="lane-chip"><span class="d" style="background:#c4bfb5"></span>Any lane</span>`;
+  const chip = (col) => `<span class="lane-chip"><span class="d" style="background:${col.accent}"></span>${esc(col.title)}</span>`;
+  const rules = [];
+  for (const col of cols) {
+    for (const a of col.on_enter || []) rules.push({ from: null, to: col, trigger: `on enter · ${col.id}`, ...a });
+    for (const a of col.on_leave || []) rules.push({ from: col, to: null, trigger: `on leave · ${col.id}`, ...a });
+  }
+  $('#rule-cards').innerHTML = rules.map((r) => `<div class="rule-card">
+    <div class="rule-row1">
+      ${r.from ? chip(r.from) : anyChip}<span class="rule-arrow">→</span>${r.to ? chip(r.to) : anyChip}
+      <span class="rule-status">Active</span>
+      <span class="toggle"><i></i></span>
+    </div>
+    <div class="rule-row2"><b>${esc(r.name)}</b><span class="trig-chip">${esc(r.trigger)}</span>${r.background ? '<span class="tag-chip">background</span>' : ''}</div>
+    <div class="rule-action">${esc(r.run)}</div>
+  </div>`).join('') || '<div style="font-size:12.5px;color:#a8a29a;margin-bottom:14px">No automations yet — give a column an on_enter action in board.yml.</div>';
+  $('#btn-add-rule').onclick = () =>
+    toast('Automations live in board.yml', 'Add on_enter / on_leave actions to a column — see templates/board.yml for the shape.');
 }
 
+/* ---------- connection page ---------- */
+function renderConnection() {
+  const claude = DATA.setup.connectors.find((c) => c.id === 'claude');
+  const st = claude?.status;
+  const ok = st?.connected;
+  $('#conn-pill').outerHTML = `<span id="conn-pill" class="pill ${ok ? 'ok' : 'warn'}"><span class="d"></span>${ok ? 'Connected' : st?.configured ? 'Unverified' : 'Not found'}</span>`;
+  $('#conn-detail').innerHTML = `${esc(st?.detail || 'Run Re-check to probe the claude CLI.')} · board <b>${esc(DATA.board.name)}</b>`;
+
+  let sessions = 0;
+  let runsToday = 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = [];
+  for (const c of DATA.cards) {
+    sessions += (c.sessions || []).length;
+    for (const e of c.log || []) {
+      if ((e.kind === 'action' || e.kind === 'source') && String(e.at).startsWith(today)) runsToday++;
+    }
+    (c.sessions || []).forEach((s, i) => rows.push({
+      card: c, sess: s,
+      latest: i === c.sessions.length - 1,
+      running: !!c.pending_session_logs?.length && i === c.sessions.length - 1,
+    }));
+  }
+  $('#stat-sessions').textContent = sessions;
+  $('#stat-runs').textContent = runsToday;
+  $('#stat-cards').textContent = DATA.cards.length;
+
+  rows.sort((a, b) => Date.parse(b.sess.at || 0) - Date.parse(a.sess.at || 0));
+  $('#sess-list').innerHTML = rows.slice(0, 12).map((r) => {
+    const st2 = r.running ? { l: 'running', c: '#c2410c', d: '#ea580c', pulse: true }
+      : r.latest ? { l: 'latest', c: '#0f766e', d: '#0d9488', pulse: false }
+      : { l: 'idle', c: '#a8a29a', d: '#c4bfb5', pulse: false };
+    return `<div class="sess-row" data-card="${r.card.id}">
+      <span class="sess-dot${st2.pulse ? ' pulse' : ''}" style="background:${st2.d};${st2.pulse ? 'animation:pulseDot 1.4s infinite;' : ''}"></span>
+      <div style="flex:1;min-width:0">
+        <div class="t">${esc(r.card.title)}</div>
+        <div class="m">${esc(r.sess.id)} · ${esc(r.sess.label || '')}</div>
+      </div>
+      <span class="st" style="color:${st2.c}">${st2.l}</span>
+      <span class="wh">${r.sess.at ? ago(r.sess.at) : ''}</span>
+    </div>`;
+  }).join('') || '<div style="padding:16px;font-size:12.5px;color:#a8a29a">No Claude sessions yet — drag a card into an agent lane or use “New agent” in a card.</div>';
+  $$('#sess-list .sess-row').forEach((el) => el.addEventListener('click', () => { setView('board'); openDrawer(el.dataset.card); }));
+}
+
+/* ---------- drawer ---------- */
+const LOG_ROLE = {
+  comment: { cls: 'you', role: 'you' },
+  action:  { cls: 'tool', role: 'automation' },
+  sync:    { cls: 'system', role: 'sync' },
+  source:  { cls: 'source', role: 'source' },
+  session: { cls: 'agent', role: 'session' },
+  move:    { cls: 'system', role: 'board' },
+  create:  { cls: 'system', role: 'board' },
+  flag:    { cls: 'system', role: 'flag' },
+  update:  { cls: 'system', role: 'board' },
+  archive: { cls: 'system', role: 'board' },
+};
 function fillDrawer(id) {
-  const card = DATA.cards.find((c) => c.id === id);
-  if (!card) { closeDrawer(); return; }
-  $('#d-id').textContent = `${card.id} · ${card.type} · ${card.column}${card.project ? ' · ' + card.project : ''}${card.origin ? ` · from source "${card.origin.source}"` : ''}`;
-  $('#d-title').textContent = card.title;
-  $('#d-sub').textContent = `created ${age(card.created)} ago · updated ${age(card.updated)} ago`;
+  const c = DATA.cards.find((x) => x.id === id);
+  if (!c) { closeDrawer(); return; }
+  const tm = TYPE_META[c.type] || TYPE_META.task;
+  const sm = srcMeta(c);
+  const col = DATA.board.columns.find((x) => x.id === c.column) || {};
+  const st = cardStatus(c);
 
-  const att = card.attention || [];
-  const pr = card.pr_state;
-  $('#d-body').innerHTML = `
-    ${att.length ? `<div class="section">Attention</div><div class="att-reasons">${att.map((a) => `<div>⚠ ${esc(a.reason)}</div>`).join('')}</div>` : ''}
-    <div class="section">Refs</div>
-    ${refLink('PR', card.refs?.pr) + refLink('Ticket', card.refs?.ticket) + refLink('Slack', card.refs?.slack) || '<div class="kv">none</div>'}
-    ${pr ? `<div class="section">PR state</div>
-      <div class="kv">${esc(pr.state)}${pr.draft ? ' (draft)' : ''} · review=${esc(pr.review)} · checks=${esc(pr.checks)} · mergeable=${esc(pr.mergeable)}</div>` : ''}
-    <div class="section">Claude sessions (newest last)</div>
-    ${(card.sessions || []).map((s) =>
-      `<div class="sess-line">${esc(s.id)} <span>— ${esc(s.label || '')}</span></div>`).join('') || '<div class="kv">none yet — "New agent" starts one</div>'}
-    ${card.pending_session_logs?.length ? `<div class="kv">⏳ ${card.pending_session_logs.length} agent log(s) pending session capture</div>` : ''}
-    <div class="section">Activity</div>
-    ${(card.log || []).slice(-30).reverse().map((e) =>
-      `<div class="logline"><span class="t">${esc(e.at.replace('T', ' ').slice(0, 16))}</span> <span class="k">${esc(e.kind)}</span>${esc(e.text)}</div>`).join('')}
-  `;
+  $('#dw-chips').innerHTML = `
+    <span class="type-chip" style="color:${tm.color};background:${tm.bg}">${tm.label}</span>
+    ${sm ? `<span class="src-badge" style="color:${sm.color};background:${sm.bg}">${esc(sm.short)}</span>` : ''}
+    <span class="mono" style="font-size:11px;color:#b0aaa1">${esc(cardRef(c))}${cardRef(c) !== c.id ? ' · ' + c.id : ''}</span>
+    <button class="dw-close" id="dw-close">✕</button>`;
+  $('#dw-close').addEventListener('click', closeDrawer);
+  $('#dw-title').textContent = c.title;
+
+  const refLinks = [];
+  if (c.refs?.pr) refLinks.push(`<a href="${esc(c.refs.pr)}" target="_blank">PR</a>`);
+  if (c.refs?.slack) refLinks.push(`<a href="${esc(c.refs.slack)}" target="_blank">Slack</a>`);
+  $('#dw-meta').innerHTML = `
+    <span class="item"><span class="d" style="background:${col.accent || '#c4bfb5'}"></span>${esc(col.title || c.column)}</span>
+    ${st ? `<span class="item" style="color:${st.text};font-weight:600"><span class="status-dot${st.pulse ? ' pulse' : ''}" style="background:${st.dot}"></span>${esc(st.label)}</span>` : ''}
+    ${refLinks.length ? `<span class="dim">${refLinks.join(' · ')}</span>` : ''}
+    <span class="dim">${c.origin ? `from ${esc(c.origin.source)} · ` : ''}updated ${ago(c.updated)}</span>`;
+
+  const descBits = [];
+  const firstNote = (c.log || []).find((e) => e.kind === 'comment');
+  if (firstNote) descBits.push(esc(firstNote.text));
+  if (c.pr_state) descBits.push(`<span class="mono" style="font-size:11px;color:#78716c">PR ${esc(c.pr_state.state)} · review=${esc(c.pr_state.review)} · checks=${esc(c.pr_state.checks)} · mergeable=${esc(c.pr_state.mergeable)}</span>`);
+  if (c.refs?.ticket) descBits.push(`<span class="mono" style="font-size:11px;color:#78716c">Ticket ${esc(c.refs.ticket)}</span>`);
+  $('#dw-desc').innerHTML = descBits.join('<br><br>') || `<span style="color:#a8a29a">No notes yet — the activity below is the card's full history.</span>`;
+
+  $('#dw-attn').innerHTML = (c.attention || []).length
+    ? `<div class="dw-attn">${c.attention.map((a) => `⚠ ${esc(a.reason)}`).join('<br>')}</div>` : '';
+
+  const latest = c.sessions?.length ? c.sessions[c.sessions.length - 1] : null;
+  $('#dw-sess-id').textContent = latest ? latest.id : 'none yet — Send starts one';
+
+  $('#dw-msgs').innerHTML = (c.log || []).slice(-30).map((e) => {
+    const m = LOG_ROLE[e.kind] || LOG_ROLE.update;
+    const extra = e.kind === 'action' && e.cmd ? `\n$ ${e.cmd}` : '';
+    return `<div class="msg ${m.cls}"><div class="role">${m.role} · ${ago(e.at)}</div><div class="txt">${esc(e.text + extra)}</div></div>`;
+  }).join('');
+  const body = $('#drawer .dw-body');
+  body.scrollTop = body.scrollHeight;
 }
-
 function openDrawer(id) {
   openCardId = id;
   fillDrawer(id);
@@ -554,109 +843,190 @@ function closeDrawer() {
   $('#overlay').classList.remove('open');
 }
 
-async function drawerAction(fn, okMsg) {
+async function drawerAction(fn, head, body) {
   try {
     const res = await fn();
-    DATA = res;
-    render();
-    if (res.fired) {
-      toast(res.fired.error ? `failed: ${res.fired.error}` : (res.fired.background ? okMsg + ' (agent running in background)' : okMsg));
-    } else toast(okMsg);
-  } catch (err) { toast('failed: ' + err.message); }
+    DATA = res; render();
+    const fired = res.fired;
+    if (fired?.error) toast('Failed', fired.error);
+    else toast(head, body);
+  } catch (err) { toast('Failed', err.message); }
 }
-
 $('#overlay').addEventListener('click', closeDrawer);
-$('#d-btn-comment').addEventListener('click', () => {
-  const text = $('#d-comment').value.trim();
+$('#dw-send').addEventListener('click', () => {
+  const text = $('#dw-input').value.trim();
   if (!text || !openCardId) return;
-  drawerAction(() => api('/api/comment', { card: openCardId, text }), 'comment added');
-  $('#d-comment').value = '';
+  const card = DATA.cards.find((c) => c.id === openCardId);
+  const hasSession = card?.sessions?.length;
+  $('#dw-input').value = '';
+  if (hasSession) {
+    drawerAction(() => api('/api/comment', { card: openCardId, text, fire: true }),
+      'Message sent to session', 'Injected into the card’s latest Claude session.');
+  } else {
+    drawerAction(() => api('/api/agent', { card: openCardId, instruction: text }),
+      'New agent launched', 'No session existed — a fresh Claude session picked the card up with your message.');
+  }
 });
-$('#d-btn-fire').addEventListener('click', () => {
-  const text = $('#d-comment').value.trim();
-  if (!text || !openCardId) return toast('write the comment to fire first');
-  drawerAction(() => api('/api/comment', { card: openCardId, text, fire: true }), 'fired into Claude session ⚡');
-  $('#d-comment').value = '';
+$('#dw-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#dw-send').click();
 });
-$('#d-btn-agent').addEventListener('click', () => {
+$('#dw-comment').addEventListener('click', () => {
+  const text = $('#dw-input').value.trim();
+  if (!text || !openCardId) return toast('Nothing to save', 'Write the comment first.');
+  $('#dw-input').value = '';
+  drawerAction(() => api('/api/comment', { card: openCardId, text }), 'Comment added', null);
+});
+$('#dw-agent').addEventListener('click', () => {
   if (!openCardId) return;
-  const text = $('#d-comment').value.trim();
-  drawerAction(() => api('/api/agent', { card: openCardId, instruction: text }), 'new agent launched 🤖');
-  $('#d-comment').value = '';
+  const text = $('#dw-input').value.trim();
+  $('#dw-input').value = '';
+  drawerAction(() => api('/api/agent', { card: openCardId, instruction: text }),
+    'New agent launched', 'A fresh Claude session is picking the card up.');
 });
-$('#d-btn-flag').addEventListener('click', () => {
+$('#dw-flag').addEventListener('click', () => {
   const reason = prompt('Flag reason:');
   if (!reason || !openCardId) return;
-  drawerAction(() => api('/api/flag', { card: openCardId, reason }), 'flagged');
+  drawerAction(() => api('/api/flag', { card: openCardId, reason }), 'Flagged', reason);
 });
-$('#d-btn-unflag').addEventListener('click', () => {
-  if (!openCardId) return;
-  drawerAction(() => api('/api/flag', { card: openCardId, clear: true }), 'flags cleared');
-});
-$('#d-btn-archive').addEventListener('click', () => {
+$('#dw-archive').addEventListener('click', () => {
   if (!openCardId || !confirm('Archive this card?')) return;
   const id = openCardId;
   closeDrawer();
-  drawerAction(() => api('/api/archive', { card: id }), 'archived');
+  drawerAction(() => api('/api/archive', { card: id }), 'Archived', null);
 });
 
-$('#btn-sync').addEventListener('click', async () => {
-  const btn = $('#btn-sync');
-  btn.disabled = true; btn.textContent = 'Syncing…';
+/* ---------- header / nav / global ---------- */
+function setView(v) {
+  VIEW = v;
+  $$('.view').forEach((el) => el.classList.toggle('active', el.id === 'view-' + v));
+  $$('.nav-btn[data-view]').forEach((el) => el.classList.toggle('active', el.dataset.view === v));
+}
+$$('.nav-btn[data-view], .nav-go').forEach((el) =>
+  el.addEventListener('click', () => { setView(el.dataset.view); render(); }));
+
+$('#btn-activity').addEventListener('click', () => {
+  showActivity = !showActivity;
+  $('#activity').classList.toggle('hidden', !showActivity);
+});
+$('#btn-run-sources').addEventListener('click', async () => {
+  const btn = $('#btn-run-sources');
+  const sources = DATA.setup.sources.filter((s) => s.enabled !== false);
+  if (!sources.length) return toast('No sources yet', 'Add one on the Sources page.');
+  btn.disabled = true;
   try {
-    const res = await api('/api/sync', {});
-    DATA = res;
+    for (const s of sources) DATA = await api('/api/source/pull', { source: s.id });
     render();
-    const moved = (res.results || []).filter((r) => r.moved);
-    toast(`synced ${res.results.length} PR(s)` + (moved.length ? ` · auto-moved ${moved.map((m) => m.id).join(', ')}` : ''));
-  } catch (err) { toast('sync failed: ' + err.message, 5000); }
-  btn.disabled = false; btn.textContent = 'Sync PRs';
+    toast('Sources running', `${sources.length} scan${sources.length === 1 ? '' : 's'} launched — new cards land when Claude finishes.`);
+  } catch (err) { toast('Run failed', err.message); }
+  btn.disabled = false;
 });
 
-$('#btn-add').addEventListener('click', () => $('#modal').classList.add('open'));
-$('#m-cancel').addEventListener('click', () => $('#modal').classList.remove('open'));
+/* ---------- modals ---------- */
+$('#btn-add-card').addEventListener('click', () => {
+  $('#m-col').innerHTML = DATA.board.columns.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
+  $('#modal-card').classList.add('open');
+});
+$('#m-cancel').addEventListener('click', () => $('#modal-card').classList.remove('open'));
 $('#m-save').addEventListener('click', async () => {
   const title = $('#m-title').value.trim();
-  if (!title) return toast('title required');
+  if (!title) return toast('Title required', null);
   try {
     const res = await api('/api/add', {
-      title,
-      type: $('#m-type').value || undefined,
-      column: $('#m-col').value,
-      pr: $('#m-pr').value.trim(),
-      ticket: $('#m-ticket').value.trim(),
-      slack: $('#m-slack').value.trim(),
-      project: $('#m-project').value.trim(),
+      title, type: $('#m-type').value || undefined, column: $('#m-col').value,
+      pr: $('#m-pr').value.trim(), ticket: $('#m-ticket').value.trim(),
+      slack: $('#m-slack').value.trim(), project: $('#m-project').value.trim(),
       note: $('#m-note').value.trim(),
     });
-    DATA = res;
-    render();
-    $('#modal').classList.remove('open');
+    DATA = res; render();
+    $('#modal-card').classList.remove('open');
     ['#m-title', '#m-pr', '#m-ticket', '#m-slack', '#m-project', '#m-note'].forEach((s) => ($(s).value = ''));
-    toast(`${res.id} added`);
-  } catch (err) { toast('add failed: ' + err.message); }
+    toast(`${res.id} added`, title);
+  } catch (err) { toast('Add failed', err.message); }
+});
+
+function openSourceModal(src) {
+  editingSourceId = src?.id ?? null;
+  $('#s-heading').textContent = src ? `Edit source: ${src.id}` : 'New source';
+  $('#s-title').value = src?.title ?? '';
+  $('#s-prompt').value = src?.prompt ?? '';
+  $('#s-col').innerHTML = DATA.board.columns.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
+  if (src?.column) $('#s-col').value = src.column;
+  $$('#s-tools input').forEach((cb) => { cb.checked = (src?.tools ?? []).includes(cb.value); });
+  $('#modal-src').classList.add('open');
+}
+$('#btn-new-source').addEventListener('click', () => openSourceModal(null));
+$('#s-cancel').addEventListener('click', () => $('#modal-src').classList.remove('open'));
+$('#s-save').addEventListener('click', async () => {
+  const title = $('#s-title').value.trim();
+  const promptText = $('#s-prompt').value.trim();
+  if (!promptText) return toast('Prompt required', null);
+  const tools = $$('#s-tools input:checked').map((cb) => cb.value);
+  const id = editingSourceId || (title || 'source').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  try {
+    DATA = await api('/api/source/save', { id, title: title || id, prompt: promptText, tools, column: $('#s-col').value });
+    render();
+    $('#modal-src').classList.remove('open');
+    toast('Source saved', `“${id}” written to board.yml`);
+  } catch (err) { toast('Save failed', err.message); }
+});
+
+$('#btn-verify').addEventListener('click', async () => {
+  const btn = $('#btn-verify');
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    DATA = await api('/api/connectors/verify', {});
+    render();
+    toast('Claude auth verified', 'A real headless run completed.');
+  } catch (err) { toast('Verify failed', err.message); }
+  btn.disabled = false; btn.textContent = 'Verify auth';
+});
+$('#btn-recheck').addEventListener('click', async () => {
+  const btn = $('#btn-recheck');
+  btn.disabled = true; btn.textContent = 'Checking…';
+  try { DATA = await api('/api/connectors/check', {}); render(); toast('Connectors re-checked', null); }
+  catch (err) { toast('Check failed', err.message); }
+  btn.disabled = false; btn.textContent = 'Re-check';
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeDrawer();
-    $('#modal').classList.remove('open');
-    $('#modal-src').style.display = 'none';
-  }
+  if (e.key === 'Escape') { closeDrawer(); $$('.modal').forEach((m) => m.classList.remove('open')); }
 });
 
-let firstLoad = true;
+/* ---------- sidebar ---------- */
+function renderSidebar() {
+  $('#side-name').textContent = DATA.board.name;
+  document.title = DATA.board.name;
+  const bb = $('#nav-badge-board');
+  bb.textContent = DATA.attention_count || DATA.cards.length;
+  bb.classList.toggle('hot', DATA.attention_count > 0);
+  bb.title = DATA.attention_count > 0 ? `${DATA.attention_count} need attention` : `${DATA.cards.length} cards`;
+  $('#nav-badge-sources').textContent = DATA.setup.sources.length;
+
+  const claude = DATA.setup.connectors.find((c) => c.id === 'claude');
+  const st = claude?.status;
+  const dot = $('#claude-dot');
+  dot.className = 'dot ' + (st?.connected ? 'ok' : st?.configured ? 'warn' : 'off');
+  $('#claude-lbl').textContent = st?.connected ? 'Claude connected' : st?.configured ? 'Claude unverified' : 'Claude not found';
+  $('#claude-sub').textContent = `${claude?.sessions ?? 0} session${(claude?.sessions ?? 0) === 1 ? '' : 's'} across ${claude?.session_cards ?? 0} card${(claude?.session_cards ?? 0) === 1 ? '' : 's'}`;
+}
+
+function render() {
+  if (!DATA) return;
+  renderSidebar();
+  renderBoard();
+  renderActivity();
+  renderSources();
+  renderAutomations();
+  renderConnection();
+  if (openCardId) fillDrawer(openCardId);
+}
+
 async function refresh() {
-  try {
-    DATA = await api('/api/board');
-    render();
-    // A blank board leads with the setup tiles: wire connectors, add sources.
-    if (firstLoad && DATA.cards.length === 0) $('#setup').classList.add('open');
-    firstLoad = false;
-  } catch (err) { toast('load failed: ' + err.message); }
+  try { DATA = await api('/api/board'); render(); }
+  catch (err) { toast('Load failed', err.message); }
 }
 refresh();
-setInterval(() => { if (!openCardId) refresh(); }, 15000);
+setInterval(() => { if (!openCardId && !document.querySelector('.modal.open')) refresh(); }, 12000);
 </script>
 </body>
 </html>

@@ -29,11 +29,26 @@ function boardPayload(root) {
   const cards = Object.entries(state.cards)
     .filter(([, c]) => !c.archived)
     .map(([id, card]) => ({ id, ...card, attention: computeAttention(board, card) }));
+  const ACCENTS = ['#a8a29a', '#0d9488', '#ea580c', '#7c3aed', '#16a34a', '#1d4ed8', '#9a3412'];
+  const actionSummaries = (list = []) =>
+    list.map((a, i) => {
+      const run = typeof a === 'string' ? a : a.run ?? '';
+      const name = (typeof a === 'object' && a.name) || run.trim().split(/\s+/).slice(0, 2).join(' ');
+      return { name, run: run.slice(0, 220), background: typeof a === 'object' && !!a.background, index: i };
+    });
   return {
     board: {
       name: board.board?.name ?? 'mini-board',
       group_by: board.board?.group_by ?? 'none',
-      columns: board.columns.map((c) => ({ id: c.id, title: c.title, attention: !!c.attention })),
+      columns: board.columns.map((c, i) => ({
+        id: c.id,
+        title: c.title,
+        attention: !!c.attention,
+        stale_after: c.stale_after ?? null,
+        accent: c.accent ?? ACCENTS[i % ACCENTS.length],
+        on_enter: actionSummaries(c.on_enter),
+        on_leave: actionSummaries(c.on_leave),
+      })),
     },
     cards,
     attention_count: attentionList(board, state).length,
@@ -233,11 +248,14 @@ export function startServer(root, port = 4400) {
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/connectors/verify') {
+        const board = loadBoard(root);
         const state = loadState(root);
         const result = verifyClaude();
         if (result.ok) {
           state.connectors ??= {};
           state.connectors.claude = { ...state.connectors.claude, verified: nowIso() };
+          // re-probe so connected/detail reflect the successful verify
+          state.connectors = { ...state.connectors, ...checkConnectors(board, state) };
           saveState(root, state);
         }
         json(res, result.ok ? 200 : 502, { ok: result.ok, detail: result.detail, ...boardPayload(root) });

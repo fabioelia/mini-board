@@ -25,41 +25,53 @@ defaults:
 #     The same values are exported as $MB_CARD_ID, $MB_PR, $MB_SESSION, ...
 #     Options per action: background: true (don't block; log to .mini-board/logs)
 #     and capture_session: true (harvest the Claude session_id from the output).
+#   accent: lane color shown on the web board (any CSS color).
+#   Give actions a "name:" — it labels the lane's ⚡ ON ENTER chip, the
+#   Automations page, and fired-automation toasts.
 columns:
   - id: inbox
     title: Inbox
+    accent: "#a8a29a"
     attention: true            # new asks always need triage
 
   - id: agent
     title: Agent Working
+    accent: "#ea580c"
     stale_after: 4h            # agent quiet for 4h? probably stuck
     on_enter:
       # Fire an agent with the card's full context the moment you drag it here.
-      - run: claude -p {{prompt}} --output-format json
+      - name: Dispatch agent
+        run: claude -p {{prompt}} --output-format json
         background: true
         capture_session: true
 
   - id: waiting-pr
     title: Waiting on PR
+    accent: "#0d9488"
     stale_after: 24h           # PR sitting untouched for a day
 
   - id: follow-up
     title: Needs Follow-up
+    accent: "#b91c1c"
     attention: true            # by definition: you owe it another round
 
   - id: review
     title: In Review
+    accent: "#7c3aed"
     stale_after: 48h           # nudge reviewers after two days
 
   - id: merged
     title: Merged · Verify
+    accent: "#1d4ed8"
     stale_after: 3d            # merged but unverified for 3 days
     # on_enter:
-    #   - run: ./scripts/run-e2e.sh {{card.pr}}
+    #   - name: Verify release
+    #     run: ./scripts/run-e2e.sh {{card.pr}}
     #     background: true
 
   - id: done
     title: Done
+    accent: "#16a34a"
 
 # `mb sync` pulls live PR state via the gh CLI and can move cards for you.
 sync:

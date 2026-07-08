@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Hanken Grotesk', system-ui, sans-serif; background: #f4f2ee; color: #1c1a17; -webkit-font-smoothing: antialiased; }
+  a { color: #ea580c; text-decoration: none; }
+  a:hover { color: #c2410c; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #d9d5cd; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #c4bfb5; background-clip: padding-box; border: 2px solid transparent; }
+  @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes barGrow { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
+</style>
+</helmet>
+<div style="display:flex; height:100vh; width:100%; overflow:hidden;">
+
+  <aside style="width:236px; flex:0 0 236px; background:#fbfaf8; border-right:1px solid #e7e3db; display:flex; flex-direction:column; padding:18px 14px;">
+    <div style="display:flex; align-items:center; gap:10px; padding:6px 8px 18px;">
+      <div style="width:30px; height:30px; border-radius:8px; background:#ea580c; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(234,88,12,0.35);">
+        <div style="display:flex; gap:2.5px; align-items:flex-end;">
+          <div style="width:3px; height:8px; background:#fff; border-radius:1px;"></div>
+          <div style="width:3px; height:13px; background:#fff; border-radius:1px;"></div>
+          <div style="width:3px; height:6px; background:#fff; border-radius:1px;"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:800; font-size:15px; letter-spacing:-0.02em;">Sluice</div>
+        <div style="font-size:11px; color:#97918a; font-weight:500;">Platform Team</div>
+      </div>
+    </div>
+
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.09em; color:#a8a29a; text-transform:uppercase; padding:4px 10px 8px;">Workspace</div>
+    <sc-for list="{{ nav }}" as="item" hint-placeholder-count="4">
+      <button data-view="{{ item.id }}" onClick="{{ handleNav }}" style="{{ item.btnStyle }}">
+        <span style="{{ item.iconWrap }}">{{ item.glyph }}</span>
+        <span style="flex:1; text-align:left;">{{ item.label }}</span>
+        <sc-if value="{{ item.badge }}" hint-placeholder-val=""><span style="{{ item.badgeStyle }}">{{ item.badge }}</span></sc-if>
+      </button>
+    </sc-for>
+
+    <div style="flex:1;"></div>
+
+    <div style="border:1px solid #e7e3db; border-radius:12px; padding:12px; background:#fff;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.15);"></span>
+        <span style="font-size:12.5px; font-weight:700;">Claude connected</span>
+      </div>
+      <div style="font-size:11px; color:#8a847c; line-height:1.5;">2 active sessions · claude-sonnet-4.5</div>
+      <button onClick="{{ goSetup }}" style="margin-top:10px; width:100%; font-family:inherit; font-size:11.5px; font-weight:600; color:#57534e; background:#f4f2ee; border:1px solid #e7e3db; border-radius:7px; padding:6px; cursor:pointer;" style-hover="background:#ece9e2;">Manage connection</button>
+    </div>
+  </aside>
+
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column; background:#f4f2ee;">
+
+    <!-- ============ BOARD ============ -->
+    <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex; flex-direction:column; height:100%; min-height:0;">
+      <header style="display:flex; align-items:center; gap:16px; padding:16px 22px; border-bottom:1px solid #e7e3db; background:#fbfaf8;">
+        <div>
+          <div style="font-size:17px; font-weight:800; letter-spacing:-0.02em;">Ticket Flow</div>
+          <div style="font-size:11.5px; color:#97918a; font-weight:500; margin-top:1px;">Sources feed the board · drag to run automations</div>
+        </div>
+        <div style="flex:1;"></div>
+        <button onClick="{{ runSources }}" style="display:flex; align-items:center; gap:7px; font-family:inherit; font-size:12.5px; font-weight:600; color:#fff; background:#ea580c; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; box-shadow:0 2px 6px rgba(234,88,12,0.28);" style-hover="background:#d24d0a;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#fff;"></span>Run sources
+        </button>
+        <button onClick="{{ toggleActivity }}" style="font-family:inherit; font-size:12.5px; font-weight:600; color:#57534e; background:#fff; border:1px solid #e7e3db; border-radius:8px; padding:8px 12px; cursor:pointer;" style-hover="background:#f4f2ee;">Activity</button>
+      </header>
+
+      <div style="flex:1; min-height:0; display:flex;">
+        <div style="flex:1; min-width:0; overflow-x:auto; overflow-y:hidden; padding:18px 22px;">
+          <div style="display:flex; gap:14px; height:100%; align-items:stretch;">
+            <sc-for list="{{ lanesData }}" as="lane" hint-placeholder-count="5">
+              <div style="width:274px; flex:0 0 274px; display:flex; flex-direction:column; min-height:0;">
+                <div style="display:flex; align-items:center; gap:8px; padding:2px 4px 10px;">
+                  <span style="width:9px; height:9px; border-radius:3px; {{ lane.dotStyle }}"></span>
+                  <span style="font-size:13px; font-weight:700; letter-spacing:-0.01em;">{{ lane.name }}</span>
+                  <span style="font-size:11px; font-weight:600; color:#a8a29a; background:#eceae4; border-radius:20px; padding:1px 7px;">{{ lane.count }}</span>
+                  <span style="flex:1;"></span>
+                </div>
+                <sc-if value="{{ lane.automation }}" hint-placeholder-val="">
+                  <div style="display:flex; align-items:center; gap:6px; margin:0 2px 10px; padding:6px 9px; background:#fdf5ee; border:1px solid #f6e2d0; border-radius:8px;">
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:600; color:#ea580c;">⚡ ON ENTER</span>
+                    <span style="font-size:11px; color:#9a6a3f; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ lane.automation }}</span>
+                  </div>
+                </sc-if>
+                <div data-lane="{{ lane.id }}" onDragOver="{{ handleDragOver }}" onDrop="{{ handleDrop }}" style="{{ lane.bodyStyle }}">
+                  <sc-for list="{{ lane.tickets }}" as="t" hint-placeholder-count="2">
+                    <div draggable="{{ dragTrue }}" data-id="{{ t.id }}" onDragStart="{{ handleDragStart }}" onDragEnd="{{ handleDragEnd }}" onClick="{{ openTicket }}" style="{{ t.cardStyle }}" style-hover="border-color:#d6d1c8; box-shadow:0 4px 14px rgba(28,26,23,0.09);">
+                      <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <span style="{{ t.tm.chip }}">{{ t.tm.label }}</span>
+                        <span style="{{ t.sm.badge }}">{{ t.sm.short }}</span>
+                        <span style="flex:1;"></span>
+                        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#b0aaa1;">{{ t.ref }}</span>
+                      </div>
+                      <div style="font-size:13px; font-weight:600; line-height:1.35; letter-spacing:-0.01em; color:#26231f;">{{ t.title }}</div>
+                      <div style="display:flex; align-items:center; gap:7px; margin-top:11px;">
+                        <sc-if value="{{ t.showAgent }}" hint-placeholder-val="">
+                          <span style="{{ t.am.dot }}"></span>
+                          <span style="font-size:11px; font-weight:600; {{ t.am.textStyle }}">{{ t.am.label }}</span>
+                        </sc-if>
+                        <span style="flex:1;"></span>
+                        <span style="font-size:10.5px; color:#b0aaa1; font-weight:500;">{{ t.when }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <button onClick="{{ noop }}" style="width:172px; flex:0 0 172px; align-self:flex-start; margin-top:2px; font-family:inherit; font-size:12.5px; font-weight:600; color:#a8a29a; background:transparent; border:1.5px dashed #d9d5cd; border-radius:12px; padding:14px; cursor:pointer;" style-hover="border-color:#ea580c; color:#ea580c;">+ Add lane</button>
+          </div>
+        </div>
+
+        <sc-if value="{{ showActivity }}" hint-placeholder-val="{{ true }}">
+          <aside style="width:296px; flex:0 0 296px; border-left:1px solid #e7e3db; background:#fbfaf8; display:flex; flex-direction:column;">
+            <div style="padding:16px 18px 12px; border-bottom:1px solid #e7e3db; display:flex; align-items:center; gap:8px;">
+              <span style="font-size:13px; font-weight:700;">Automation activity</span>
+              <span style="flex:1;"></span>
+              <span style="width:7px; height:7px; border-radius:50%; background:#16a34a; animation:pulseDot 1.6s infinite;"></span>
+              <span style="font-size:10.5px; color:#97918a; font-weight:600;">Live</span>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:8px 14px 20px;">
+              <sc-for list="{{ activity }}" as="ev" hint-placeholder-count="4">
+                <div style="display:flex; gap:10px; padding:11px 4px; border-bottom:1px solid #efece5;">
+                  <span style="{{ ev.iconStyle }}">{{ ev.icon }}</span>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:12px; line-height:1.45; color:#3a3630;">{{ ev.text }}</div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                      <sc-if value="{{ ev.rule }}" hint-placeholder-val=""><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:600; color:#ea580c; background:#fdf1e8; border-radius:4px; padding:1px 5px;">{{ ev.rule }}</span></sc-if>
+                      <span style="font-size:10px; color:#b0aaa1;">{{ ev.when }}</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </aside>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ SOURCES ============ -->
+    <sc-if value="{{ isSources }}" hint-placeholder-val="">
+    <div style="height:100%; overflow-y:auto;">
+      <header style="padding:20px 30px 6px;">
+        <div style="font-size:20px; font-weight:800; letter-spacing:-0.02em;">Sources</div>
+        <div style="font-size:13px; color:#8a847c; margin-top:3px;">Connect MCP tools, then tell Claude what to pull. Matches become tickets in the Sources lane.</div>
+      </header>
+      <div style="max-width:1000px; padding:18px 30px 40px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#a8a29a; text-transform:uppercase; margin-bottom:12px;">Connected tools</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px;">
+          <sc-for list="{{ sources }}" as="s" hint-placeholder-count="3">
+            <div style="background:#fff; border:1px solid #e7e3db; border-radius:14px; padding:16px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <span style="{{ s.badge }}">{{ s.short }}</span>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:14px; font-weight:700;">{{ s.name }}</div>
+                  <div style="font-size:11.5px; color:#97918a;">{{ s.desc }}</div>
+                </div>
+                <span style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#16a34a; background:#e8f6ec; border-radius:20px; padding:3px 9px;"><span style="width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>Connected</span>
+              </div>
+              <div style="margin-top:12px; padding-top:12px; border-top:1px solid #f0ede7; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:10.5px; font-weight:700; letter-spacing:0.05em; color:#b0aaa1; text-transform:uppercase;">Scope</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#57534e;">{{ s.scope }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:32px;">
+          <sc-for list="{{ addSources }}" as="a" hint-placeholder-count="4">
+            <button onClick="{{ noop }}" style="display:flex; align-items:center; gap:8px; font-family:inherit; font-size:12.5px; font-weight:600; color:#78716c; background:#fff; border:1.5px dashed #d9d5cd; border-radius:10px; padding:9px 13px; cursor:pointer;" style-hover="border-color:#ea580c; color:#ea580c;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#a8a29a;">{{ a.short }}</span>+ {{ a.name }}
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#a8a29a; text-transform:uppercase; margin-bottom:12px;">Source prompt</div>
+        <div style="background:#fff; border:1px solid #e7e3db; border-radius:14px; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:8px; padding:11px 14px; background:#faf8f5; border-bottom:1px solid #eeebe4;">
+            <span style="width:7px; height:7px; border-radius:50%; background:#ea580c;"></span>
+            <span style="font-size:12px; font-weight:700;">What should Claude scan?</span>
+            <span style="flex:1;"></span>
+            <span style="font-size:11px; color:#97918a;">Runs every 30 min · or on demand</span>
+          </div>
+          <textarea spellcheck="false" style="width:100%; min-height:150px; resize:vertical; border:none; outline:none; padding:16px; font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.7; color:#3a3630; background:#fff;">{{ sourcePrompt }}</textarea>
+          <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; background:#faf8f5; border-top:1px solid #eeebe4;">
+            <span style="font-size:11.5px; color:#8a847c;">Last run generated <b style="color:#3a3630;">4 tickets</b> · 2 min ago</span>
+            <span style="flex:1;"></span>
+            <button onClick="{{ goBoard }}" style="font-family:inherit; font-size:12px; font-weight:600; color:#57534e; background:#fff; border:1px solid #e7e3db; border-radius:8px; padding:7px 12px; cursor:pointer;" style-hover="background:#f4f2ee;">Preview matches</button>
+            <button onClick="{{ runSources }}" style="font-family:inherit; font-size:12px; font-weight:600; color:#fff; background:#ea580c; border:none; border-radius:8px; padding:7px 14px; cursor:pointer;" style-hover="background:#d24d0a;">Run now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ AUTOMATIONS ============ -->
+    <sc-if value="{{ isAutomations }}" hint-placeholder-val="">
+    <div style="height:100%; overflow-y:auto;">
+      <header style="padding:20px 30px 6px;">
+        <div style="font-size:20px; font-weight:800; letter-spacing:-0.02em;">Automations</div>
+        <div style="font-size:13px; color:#8a847c; margin-top:3px;">When a ticket crosses a lane boundary, Claude runs the action. Order follows the board, left to right.</div>
+      </header>
+      <div style="max-width:920px; padding:18px 30px 40px; display:flex; flex-direction:column; gap:14px;">
+        <sc-for list="{{ rulesData }}" as="r" hint-placeholder-count="4">
+          <div style="background:#fff; border:1px solid #e7e3db; border-radius:14px; padding:16px 18px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#3a3630; background:#f4f2ee; border:1px solid #e7e3db; border-radius:7px; padding:4px 9px;"><span style="width:8px; height:8px; border-radius:3px; {{ r.fromDot }}"></span>{{ r.fromName }}</span>
+                <span style="color:#c4bfb5; font-size:14px;">→</span>
+                <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#3a3630; background:#f4f2ee; border:1px solid #e7e3db; border-radius:7px; padding:4px 9px;"><span style="width:8px; height:8px; border-radius:3px; {{ r.toDot }}"></span>{{ r.toName }}</span>
+              </div>
+              <span style="flex:1;"></span>
+              <span style="font-size:11.5px; font-weight:700; {{ r.statusStyle }}">{{ r.statusLabel }}</span>
+              <span style="{{ r.toggleTrack }}"><span style="{{ r.toggleKnob }}"></span></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; margin:14px 0 8px;">
+              <span style="font-size:13px; font-weight:700; color:#26231f;">{{ r.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:#ea580c; background:#fdf1e8; border-radius:4px; padding:1px 6px;">{{ r.trigger }}</span>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.65; color:#57534e; background:#faf8f5; border:1px solid #eeebe4; border-radius:9px; padding:12px 14px;">{{ r.action }}</div>
+          </div>
+        </sc-for>
+        <button onClick="{{ noop }}" style="align-self:flex-start; font-family:inherit; font-size:12.5px; font-weight:600; color:#a8a29a; background:transparent; border:1.5px dashed #d9d5cd; border-radius:11px; padding:12px 18px; cursor:pointer;" style-hover="border-color:#ea580c; color:#ea580c;">+ Add automation</button>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ SETUP ============ -->
+    <sc-if value="{{ isSetup }}" hint-placeholder-val="">
+    <div style="height:100%; overflow-y:auto;">
+      <header style="padding:20px 30px 6px;">
+        <div style="font-size:20px; font-weight:800; letter-spacing:-0.02em;">Connection</div>
+        <div style="font-size:13px; color:#8a847c; margin-top:3px;">Sluice runs on your Claude account. Sessions execute the automations and can be messaged directly.</div>
+      </header>
+      <div style="max-width:900px; padding:18px 30px 40px;">
+        <div style="display:flex; gap:16px; background:#fff; border:1px solid #e7e3db; border-radius:16px; padding:20px; margin-bottom:24px;">
+          <div style="width:52px; height:52px; border-radius:13px; background:#1c1a17; display:flex; align-items:center; justify-content:center; flex:0 0 52px;">
+            <span style="color:#ea580c; font-weight:800; font-size:18px;">✳</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:16px; font-weight:800;">Claude</span>
+              <span style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#16a34a; background:#e8f6ec; border-radius:20px; padding:3px 9px;"><span style="width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>Connected</span>
+            </div>
+            <div style="font-size:12.5px; color:#8a847c; margin-top:3px;">OAuth · claude-sonnet-4.5 · workspace <b style="color:#3a3630;">platform-team</b></div>
+            <div style="display:flex; gap:22px; margin-top:16px;">
+              <div><div style="font-size:22px; font-weight:800; letter-spacing:-0.02em;">2</div><div style="font-size:11px; color:#97918a; font-weight:600;">Active sessions</div></div>
+              <div><div style="font-size:22px; font-weight:800; letter-spacing:-0.02em;">38</div><div style="font-size:11px; color:#97918a; font-weight:600;">Runs today</div></div>
+              <div><div style="font-size:22px; font-weight:800; letter-spacing:-0.02em;">1.2M</div><div style="font-size:11px; color:#97918a; font-weight:600;">Tokens today</div></div>
+            </div>
+          </div>
+          <button onClick="{{ noop }}" style="align-self:flex-start; font-family:inherit; font-size:12px; font-weight:600; color:#57534e; background:#f4f2ee; border:1px solid #e7e3db; border-radius:8px; padding:7px 13px; cursor:pointer;" style-hover="background:#ece9e2;">Reconnect</button>
+        </div>
+
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#a8a29a; text-transform:uppercase; margin-bottom:12px;">Live sessions</div>
+        <div style="background:#fff; border:1px solid #e7e3db; border-radius:14px; overflow:hidden;">
+          <sc-for list="{{ sessions }}" as="ss" hint-placeholder-count="3">
+            <div onClick="{{ ss.open }}" style="display:flex; align-items:center; gap:14px; padding:14px 16px; border-bottom:1px solid #f0ede7; cursor:pointer;" style-hover="background:#faf8f5;">
+              <span style="{{ ss.dot }}"></span>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:13px; font-weight:600; color:#26231f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ ss.title }}</div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#a8a29a; margin-top:2px;">{{ ss.id }} · {{ ss.tokens }}</div>
+              </div>
+              <span style="font-size:11.5px; font-weight:600; {{ ss.statusStyle }}">{{ ss.status }}</span>
+              <span style="font-size:11px; color:#b0aaa1; width:64px; text-align:right;">{{ ss.when }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+  </main>
+
+  <!-- ============ TICKET DRAWER ============ -->
+  <sc-if value="{{ showDrawer }}" hint-placeholder-val="">
+    <div onClick="{{ closeTicket }}" style="position:fixed; inset:0; background:rgba(28,26,23,0.28); z-index:40; backdrop-filter:blur(1.5px);"></div>
+    <div style="position:fixed; top:0; right:0; bottom:0; width:520px; max-width:92vw; background:#fbfaf8; border-left:1px solid #e7e3db; z-index:41; display:flex; flex-direction:column; box-shadow:-16px 0 44px rgba(28,26,23,0.16);">
+      <div style="padding:18px 22px; border-bottom:1px solid #e7e3db;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="{{ sel.tm.chip }}">{{ sel.tm.label }}</span>
+          <span style="{{ sel.sm.badge }}">{{ sel.sm.short }}</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#b0aaa1;">{{ sel.ref }}</span>
+          <span style="flex:1;"></span>
+          <button onClick="{{ closeTicket }}" style="font-family:inherit; width:28px; height:28px; font-size:15px; color:#8a847c; background:#f4f2ee; border:1px solid #e7e3db; border-radius:7px; cursor:pointer;" style-hover="background:#ece9e2;">✕</button>
+        </div>
+        <div style="font-size:17px; font-weight:800; letter-spacing:-0.02em; margin-top:12px; line-height:1.3;">{{ sel.title }}</div>
+        <div style="display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap;">
+          <span style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:#78716c; font-weight:500;"><span style="width:8px; height:8px; border-radius:3px; {{ sel.laneDot }}"></span>{{ sel.laneName }}</span>
+          <sc-if value="{{ sel.showAgent }}" hint-placeholder-val=""><span style="display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; {{ sel.am.textStyle }}"><span style="{{ sel.am.dot }}"></span>{{ sel.am.label }}</span></sc-if>
+          <span style="font-size:11.5px; color:#a8a29a;">from {{ sel.sm.label }} · {{ sel.when }}</span>
+        </div>
+      </div>
+
+      <div style="flex:1; overflow-y:auto; padding:18px 22px;">
+        <div style="font-size:12.5px; line-height:1.6; color:#4a453f; background:#fff; border:1px solid #eeebe4; border-radius:11px; padding:14px 16px;">{{ sel.body }}</div>
+
+        <div style="display:flex; align-items:center; gap:8px; margin:22px 0 12px;">
+          <span style="font-size:12px; font-weight:700; letter-spacing:0.04em; color:#78716c; text-transform:uppercase;">Claude session</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#b0aaa1;">{{ sel.sessionId }}</span>
+          <span style="flex:1; height:1px; background:#eeebe4;"></span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ sel.session }}" as="m" hint-placeholder-count="4">
+            <div style="{{ m.wrap }}">
+              <div style="{{ m.roleStyle }}">{{ m.role }}</div>
+              <div style="{{ m.textStyle }}">{{ m.text }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #e7e3db; padding:14px 18px; background:#fbfaf8;">
+        <div style="display:flex; align-items:flex-end; gap:10px; background:#fff; border:1px solid #e0dcd3; border-radius:12px; padding:8px 8px 8px 14px;">
+          <textarea ref="{{ composerRef }}" spellcheck="false" placeholder="Message this session…" style="flex:1; resize:none; border:none; outline:none; font-family:inherit; font-size:13px; line-height:1.5; color:#26231f; background:transparent; min-height:22px; max-height:120px; padding:5px 0;"></textarea>
+          <button onClick="{{ sendMessage }}" style="font-family:inherit; font-size:12.5px; font-weight:700; color:#fff; background:#ea580c; border:none; border-radius:9px; padding:9px 15px; cursor:pointer;" style-hover="background:#d24d0a;">Send</button>
+        </div>
+        <div style="font-size:10.5px; color:#b0aaa1; margin-top:7px; padding-left:2px;">Messages are injected into the live agent session for this ticket.</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ TOASTS ============ -->
+  <div style="position:fixed; right:22px; bottom:22px; z-index:60; display:flex; flex-direction:column; gap:10px; align-items:flex-end;">
+    <sc-for list="{{ toasts }}" as="tt" hint-placeholder-count="0">
+      <div style="animation:toastIn 0.28s cubic-bezier(0.2,0.8,0.2,1); display:flex; gap:11px; width:340px; background:#1c1a17; color:#f4f2ee; border-radius:12px; padding:13px 15px; box-shadow:0 12px 34px rgba(28,26,23,0.32);">
+        <span style="width:26px; height:26px; flex:0 0 26px; border-radius:7px; background:rgba(234,88,12,0.22); display:flex; align-items:center; justify-content:center; font-size:13px;">⚡</span>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12.5px; font-weight:700;">Automation fired · {{ tt.rule }}</div>
+          <div style="font-size:11.5px; color:#c9c4bc; line-height:1.5; margin-top:3px;">{{ tt.text }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:720}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.dragTrue = true;
+    this.composerRef = React.createRef();
+
+    this.lanes = [
+      { id: 'sources',  name: 'Sources',     accent: '#a8a29a' },
+      { id: 'backlog',  name: 'Backlog',     accent: '#0d9488' },
+      { id: 'progress', name: 'In Progress', accent: '#ea580c' },
+      { id: 'review',   name: 'Review',      accent: '#7c3aed' },
+      { id: 'done',     name: 'Done',        accent: '#16a34a' },
+    ];
+
+    this.rules = [
+      { id: 'r1', from: 'sources',  to: 'backlog',  name: 'Enrich context',   trigger: 'sources → backlog', enabled: true,
+        action: 'Fire a Claude session to search Slack + GitHub for related threads, prior incidents, and likely owners. Summarize findings and attach them to the ticket.' },
+      { id: 'r2', from: 'backlog',  to: 'progress', name: 'Dispatch build agent', trigger: 'backlog → progress', enabled: true,
+        action: 'Start an agent with the gathered context. Create a branch, implement the change, and open a draft PR linked to this ticket.' },
+      { id: 'r3', from: 'progress', to: 'review',   name: 'Verify & self-heal', trigger: 'progress → review', enabled: true,
+        action: 'Monitor CI. Run the test suite, auto-apply fixes for failing checks, and add a regression test before requesting human review.' },
+      { id: 'r4', from: 'review',   to: 'done',     name: 'Ship & announce',   trigger: 'review → done', enabled: false,
+        action: 'Merge the PR once approvals land, close linked Jira issues, and post a release summary to #eng-releases.' },
+    ];
+
+    this.typeMeta = {
+      bug:      { label: 'Bug',      color: '#b91c1c', bg: '#fbe9e6' },
+      pr:       { label: 'PR',       color: '#6d28d9', bg: '#f0eafb' },
+      feedback: { label: 'Feedback', color: '#0f766e', bg: '#e2f4f1' },
+      task:     { label: 'Task',     color: '#1d4ed8', bg: '#e8eefc' },
+    };
+    this.srcMeta = {
+      slack: { label: 'Slack',  short: 'SL', color: '#6b2d75', bg: '#f1e9f3' },
+      github:{ label: 'GitHub', short: 'GH', color: '#2b2b30', bg: '#ecebe8' },
+      jira:  { label: 'Jira',   short: 'JR', color: '#1d4ed8', bg: '#e8eefc' },
+    };
+    this.agentMeta = {
+      idle:     { color: '#c4bfb5', label: null,               text: '#a8a29a', pulse: false },
+      enriched: { color: '#0d9488', label: 'Context attached', text: '#0f766e', pulse: false },
+      working:  { color: '#ea580c', label: 'Agent working',    text: '#c2410c', pulse: true },
+      testing:  { color: '#7c3aed', label: 'Monitoring CI',    text: '#6d28d9', pulse: true },
+      done:     { color: '#16a34a', label: 'Complete',         text: '#15803d', pulse: false },
+    };
+
+    this.state = {
+      view: 'board',
+      dragId: null,
+      dragOverLane: null,
+      showActivity: true,
+      selectedId: null,
+      toasts: [],
+      sessions: {},
+      tickets: [
+        { id: 't1', ref: 'FB-204', title: 'CSV export times out on datasets over 50k rows', type: 'feedback', source: 'slack',  lane: 'sources',  agent: 'idle',     when: '2m',  body: 'Three users in #user-feedback report the CSV export spinner never resolves for large workspaces. One attached a HAR showing a 30s gateway timeout.' },
+        { id: 't2', ref: 'BUG-88', title: 'Login redirect loops on Safari 17', type: 'bug',      source: 'slack',  lane: 'sources',  agent: 'idle',     when: '6m',  body: 'Reported in #bugs: after SSO, Safari bounces between /auth and /callback. Chrome and Firefox unaffected. Likely SameSite cookie handling.' },
+        { id: 't3', ref: 'PR-482', title: 'Refactor auth middleware to shared package', type: 'pr',   source: 'github', lane: 'sources',  agent: 'idle',     when: '11m', body: 'Open PR assigned to you. Extracts auth guards into @acme/auth. Needs review + a decision on the deprecated token path.' },
+        { id: 't4', ref: 'SWIM-231', title: 'Add rate limiting to public API', type: 'task', source: 'jira', lane: 'sources', agent: 'idle', when: '18m', body: 'On your plate for this sprint. Token-bucket per API key, 600 req/min, with a 429 + Retry-After header.' },
+
+        { id: 't5', ref: 'BUG-71', title: 'Webhook retries deliver duplicate events', type: 'bug', source: 'github', lane: 'backlog', agent: 'enriched', when: '1h', body: 'Consumers get the same event 2–3x during retries. Idempotency keys exist but are not checked on the delivery path.' },
+        { id: 't6', ref: 'FB-198', title: 'Dark-mode tag contrast fails WCAG AA', type: 'feedback', source: 'slack', lane: 'backlog', agent: 'enriched', when: '2h', body: 'Accessibility audit flagged tag chips at 3.1:1 in dark mode. Needs a token adjustment across the label palette.' },
+
+        { id: 't7', ref: 'SWIM-198', title: 'Migrate session store to Redis', type: 'task', source: 'jira', lane: 'progress', agent: 'working', when: '25m', body: 'Move ephemeral agent sessions off Postgres onto Redis with TTL. Behind a feature flag for gradual rollout.' },
+        { id: 't8', ref: 'PR-475', title: 'Streaming responses for board sync', type: 'pr', source: 'github', lane: 'progress', agent: 'working', when: '40m', body: 'Server-sent events for live ticket updates so multiple viewers stay in sync without polling.' },
+
+        { id: 't9', ref: 'BUG-63', title: 'Flaky e2e test on ticket drag', type: 'bug', source: 'github', lane: 'review', agent: 'testing', when: '1h', body: 'The drag-and-drop spec fails ~15% of runs on CI. Agent is stabilizing the wait conditions and re-running.' },
+
+        { id: 't10', ref: 'PR-470', title: 'Onboarding: connect-Claude flow', type: 'pr', source: 'github', lane: 'done', agent: 'done', when: '3h', body: 'Merged. First-run OAuth + session discovery for new workspaces.' },
+        { id: 't11', ref: 'SWIM-150', title: 'MCP source registry', type: 'task', source: 'jira', lane: 'done', agent: 'done', when: '1d', body: 'Shipped. Pluggable registry so new MCP tools can be added as sources.' },
+      ],
+      activity: [
+        { id: 'a1', icon: '✳', tone: 'accent', text: 'Session opened a draft PR for “Migrate session store to Redis”.', rule: 'r2 · dispatch', when: '25m ago' },
+        { id: 'a2', icon: 'CI', tone: 'purple', text: 'CI monitor re-ran the drag e2e suite — 2 fixes auto-applied.', rule: 'r3 · verify', when: '1h ago' },
+        { id: 'a3', icon: 'SL', tone: 'neutral', text: 'Sources scan of #user-feedback generated 4 new tickets.', rule: null, when: '2h ago' },
+        { id: 'a4', icon: '✳', tone: 'green', text: 'Enrichment attached 3 related threads to “Webhook retries”.', rule: 'r1 · enrich', when: '2h ago' },
+      ],
+    };
+
+    this.sourcePrompt = 'Scan #user-feedback, #bugs and #eng in Slack for issues reported in the last 24h.\nInclude any GitHub PRs assigned to me and open issues labeled `triage`.\nAdd Jira tickets on my plate for the current sprint (board SWIM).\n\nFor each: draft a one-line title, infer the type (bug / feedback / PR / task),\nand skip anything already on the board.';
+
+    this.handleNav = this.handleNav.bind(this);
+    this.goBoard = () => this.setState({ view: 'board' });
+    this.goSetup = () => this.setState({ view: 'setup' });
+    this.handleDragStart = this.handleDragStart.bind(this);
+    this.handleDragOver = this.handleDragOver.bind(this);
+    this.handleDrop = this.handleDrop.bind(this);
+    this.handleDragEnd = this.handleDragEnd.bind(this);
+    this.openTicket = this.openTicket.bind(this);
+    this.closeTicket = () => this.setState({ selectedId: null });
+    this.toggleActivity = () => this.setState(s => ({ showActivity: !s.showActivity }));
+    this.runSources = this.runSources.bind(this);
+    this.sendMessage = this.sendMessage.bind(this);
+    this.noop = () => {};
+    this._seq = 100;
+  }
+
+  handleNav(e) { this.setState({ view: e.currentTarget.getAttribute('data-view') }); }
+
+  handleDragStart(e) {
+    const id = e.currentTarget.getAttribute('data-id');
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); } catch (_) {}
+    this.setState({ dragId: id });
+  }
+  handleDragOver(e) {
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
+    const lane = e.currentTarget.getAttribute('data-lane');
+    if (this.state.dragOverLane !== lane) this.setState({ dragOverLane: lane });
+  }
+  handleDragEnd() { this.setState({ dragId: null, dragOverLane: null }); }
+
+  handleDrop(e) {
+    e.preventDefault();
+    const toLane = e.currentTarget.getAttribute('data-lane');
+    const id = this.state.dragId;
+    if (!id) { this.setState({ dragOverLane: null }); return; }
+    const t = this.state.tickets.find(x => x.id === id);
+    if (!t || t.lane === toLane) { this.setState({ dragId: null, dragOverLane: null }); return; }
+    const fromLane = t.lane;
+    const newAgent = { backlog: 'enriched', progress: 'working', review: 'testing', done: 'done', sources: 'idle' }[toLane] || t.agent;
+    this.setState(s => ({
+      dragId: null,
+      dragOverLane: null,
+      tickets: s.tickets.map(x => x.id === id ? { ...x, lane: toLane, agent: newAgent, when: 'now' } : x),
+    }));
+    this.fireAutomation(t, fromLane, toLane);
+  }
+
+  fireAutomation(ticket, from, to) {
+    const rule = this.rules.find(r => r.from === from && r.to === to);
+    const toName = (this.lanes.find(l => l.id === to) || {}).name || to;
+    if (!rule || !rule.enabled) {
+      this.pushActivity({ icon: '→', tone: 'neutral', text: `Moved “${ticket.title}” to ${toName}.`, rule: null });
+      return;
+    }
+    const tid = 'tst' + (this._seq++);
+    const toast = { id: tid, rule: rule.name, text: `“${ticket.title}” — ${rule.action.split('.')[0]}.` };
+    this.setState(s => ({ toasts: [...s.toasts, toast] }));
+    setTimeout(() => this.setState(s => ({ toasts: s.toasts.filter(x => x.id !== tid) })), 5200);
+    this.pushActivity({ icon: '⚡', tone: 'accent', text: `${rule.name}: ${rule.action.split('.')[0]} — “${ticket.title}”.`, rule: `${rule.id} · ${rule.name.split(' ')[0].toLowerCase()}` });
+  }
+
+  pushActivity(ev) {
+    const id = 'a' + (this._seq++);
+    this.setState(s => ({ activity: [{ id, when: 'just now', ...ev }, ...s.activity] }));
+  }
+
+  runSources() {
+    this.setState({ view: 'board' });
+    const templates = [
+      { ref: 'FB-' + (200 + (this._seq % 90)), title: 'Search filters reset when switching tabs', type: 'feedback', source: 'slack' },
+      { ref: 'BUG-' + (80 + (this._seq % 40)), title: 'Avatar upload fails silently over 5MB', type: 'bug', source: 'slack' },
+      { ref: 'PR-' + (480 + (this._seq % 30)), title: 'Bump dependencies + fix audit warnings', type: 'pr', source: 'github' },
+    ];
+    const pick = templates[this._seq % templates.length];
+    const id = 'g' + (this._seq++);
+    const ticket = { id, ...pick, lane: 'sources', agent: 'idle', when: 'now', body: 'Auto-generated by the source scan. Move to Backlog to enrich.' };
+    this.setState(s => ({ tickets: [ticket, ...s.tickets] }));
+    this.pushActivity({ icon: 'SL', tone: 'neutral', text: `Sources scan generated “${pick.title}”.`, rule: null });
+  }
+
+  buildSession(t) {
+    const src = this.srcMeta[t.source].label;
+    if (t.agent === 'idle') {
+      return [
+        { role: 'source', text: `Detected in ${src} · ${t.ref}. Not yet triaged. Move to Backlog to run enrichment.` },
+      ];
+    }
+    const base = [
+      { role: 'system', text: `Automation "Enrich context" started this session from ${src}.` },
+      { role: 'assistant', text: `Searching ${src} and GitHub for context on "${t.title}"…` },
+      { role: 'tool', text: `slack.search("${t.title.split(' ').slice(0,3).join(' ')}") → 3 threads · github.search_issues → 2 related` },
+      { role: 'assistant', text: `Found a prior incident (BUG-52) and the owning team (#platform). Likely root cause noted. Attached summary to the ticket.` },
+    ];
+    if (t.agent === 'working') base.push(
+      { role: 'tool', text: 'git checkout -b fix/' + t.ref.toLowerCase() + ' · editing 4 files' },
+      { role: 'assistant', text: 'Implemented the change and pushed a draft PR. Waiting on the first CI run before requesting review.' });
+    if (t.agent === 'testing') base.push(
+      { role: 'tool', text: 'ci.watch(run #3941) → 1 failing · retry_with_fix applied' },
+      { role: 'assistant', text: 'One flaky assertion stabilized and a regression test added. Re-running the suite now.' });
+    if (t.agent === 'done') base.push(
+      { role: 'assistant', text: 'Merged and closed the linked issues. Posted a summary to #eng-releases.' });
+    return base;
+  }
+
+  decorate(t) {
+    const tm = this.typeMeta[t.type];
+    const sm = this.srcMeta[t.source];
+    const am = this.agentMeta[t.agent] || this.agentMeta.idle;
+    const dragging = this.state.dragId === t.id;
+    return {
+      ...t,
+      tm: { label: tm.label, chip: { fontSize: '10px', fontWeight: 700, letterSpacing: '0.03em', color: tm.color, background: tm.bg, borderRadius: '5px', padding: '2px 7px', textTransform: 'uppercase' } },
+      sm: { label: sm.label, short: sm.short, badge: { fontFamily: "'JetBrains Mono', monospace", fontSize: '9.5px', fontWeight: 700, color: sm.color, background: sm.bg, borderRadius: '5px', padding: '2px 5px', letterSpacing: '0.02em' } },
+      showAgent: !!am.label,
+      am: {
+        label: am.label,
+        textStyle: { color: am.text },
+        dot: { width: '7px', height: '7px', borderRadius: '50%', background: am.color, flex: '0 0 7px', animation: am.pulse ? 'pulseDot 1.4s infinite' : 'none' },
+      },
+      cardStyle: {
+        background: '#fff', border: '1px solid #eae6de', borderRadius: '11px', padding: '12px 13px', cursor: 'grab',
+        boxShadow: dragging ? '0 10px 26px rgba(28,26,23,0.16)' : '0 1px 2px rgba(28,26,23,0.04)',
+        opacity: dragging ? 0.5 : 1, transition: 'box-shadow 0.15s, border-color 0.15s, opacity 0.12s', userSelect: 'none',
+      },
+    };
+  }
+
+  renderVals() {
+    const view = this.state.view;
+    const navDef = [
+      { id: 'board', label: 'Board', glyph: '▦', badge: String(this.state.tickets.length) },
+      { id: 'sources', label: 'Sources', glyph: '◎', badge: '4' },
+      { id: 'automations', label: 'Automations', glyph: '◆', badge: null },
+      { id: 'setup', label: 'Connection', glyph: '●', badge: null },
+    ];
+    const nav = navDef.map(n => {
+      const active = n.id === view;
+      return {
+        ...n,
+        btnStyle: { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', fontFamily: 'inherit', fontSize: '13px', fontWeight: active ? 700 : 600, color: active ? '#26231f' : '#78716c', background: active ? '#f0ece4' : 'transparent', border: 'none', borderRadius: '9px', padding: '9px 10px', cursor: 'pointer', marginBottom: '2px' },
+        iconWrap: { width: '18px', textAlign: 'center', fontSize: '13px', color: active ? '#ea580c' : '#a8a29a' },
+        badgeStyle: { fontSize: '10.5px', fontWeight: 700, color: '#a8a29a', background: '#eceae4', borderRadius: '20px', padding: '1px 7px' },
+      };
+    });
+
+    const byLane = {}; this.lanes.forEach(l => byLane[l.id] = []);
+    this.state.tickets.forEach(t => { (byLane[t.lane] = byLane[t.lane] || []).push(t); });
+    const lanesData = this.lanes.map(l => {
+      const rule = this.rules.find(r => r.to === l.id && r.enabled);
+      const over = this.state.dragOverLane === l.id;
+      return {
+        id: l.id, name: l.name, count: (byLane[l.id] || []).length,
+        automation: rule ? rule.name : null,
+        dotStyle: { background: l.accent },
+        bodyStyle: {
+          flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '9px',
+          padding: '8px', margin: '0 -4px', borderRadius: '12px',
+          background: over ? '#fdf3ea' : 'transparent',
+          outline: over ? '1.5px dashed #f0a868' : '1.5px dashed transparent',
+          transition: 'background 0.12s, outline-color 0.12s',
+        },
+        tickets: (byLane[l.id] || []).map(t => this.decorate(t)),
+      };
+    });
+
+    const sourceCards = [
+      { name: 'Slack MCP', short: 'SL', desc: 'Channels, threads, reactions', scope: '#user-feedback, #bugs, #eng', color: '#6b2d75', bg: '#f1e9f3' },
+      { name: 'Atlassian MCP', short: 'JR', desc: 'Jira issues & Confluence', scope: 'project SWIM · board 12', color: '#1d4ed8', bg: '#e8eefc' },
+      { name: 'GitHub CLI', short: 'GH', desc: 'PRs, issues, checks', scope: 'acme/web, acme/api', color: '#2b2b30', bg: '#ecebe8' },
+      { name: 'Sentry MCP', short: 'SE', desc: 'Errors & performance', scope: 'frontend, api-gateway', color: '#9a3412', bg: '#fdece0' },
+    ].map(s => ({ ...s, badge: { fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', fontWeight: 700, color: s.color, background: s.bg, borderRadius: '9px', padding: '8px 9px', flex: '0 0 auto' } }));
+
+    const addSources = [
+      { name: 'Linear', short: 'LN' }, { name: 'PagerDuty', short: 'PD' }, { name: 'Notion', short: 'NO' }, { name: 'Datadog', short: 'DD' },
+    ];
+
+    const rulesData = this.rules.map(r => {
+      const from = this.lanes.find(l => l.id === r.from) || {};
+      const to = this.lanes.find(l => l.id === r.to) || {};
+      return {
+        ...r,
+        fromName: from.name, toName: to.name,
+        fromDot: { background: from.accent }, toDot: { background: to.accent },
+        statusLabel: r.enabled ? 'Active' : 'Paused',
+        statusStyle: { color: r.enabled ? '#15803d' : '#a8a29a' },
+        toggleTrack: { width: '34px', height: '20px', borderRadius: '20px', background: r.enabled ? '#ea580c' : '#d9d5cd', position: 'relative', flex: '0 0 34px', transition: 'background 0.15s' },
+        toggleKnob: { position: 'absolute', top: '2px', left: r.enabled ? '16px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.15s' },
+      };
+    });
+
+    const actMeta = { accent: { color: '#ea580c', bg: '#fdf1e8' }, purple: { color: '#6d28d9', bg: '#f0eafb' }, green: { color: '#15803d', bg: '#e8f6ec' }, neutral: { color: '#78716c', bg: '#eceae4' } };
+    const activity = this.state.activity.map(ev => {
+      const m = actMeta[ev.tone] || actMeta.neutral;
+      return { ...ev, iconStyle: { fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: m.color, background: m.bg, borderRadius: '6px', padding: '4px', minWidth: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 22px' } };
+    });
+
+    const sessions = this.state.tickets.filter(t => ['working', 'testing', 'enriched'].includes(t.agent)).slice(0, 4).map(t => {
+      const st = { working: { label: 'running', c: '#c2410c', dot: '#ea580c', pulse: true }, testing: { label: 'testing', c: '#6d28d9', dot: '#7c3aed', pulse: true }, enriched: { label: 'idle', c: '#0f766e', dot: '#0d9488', pulse: false } }[t.agent];
+      return {
+        id: 'sess_' + t.ref.toLowerCase().replace('-', ''), title: t.title, status: st.label, when: t.when + ' ago',
+        tokens: (8 + (t.title.length % 40)) + 'k tokens',
+        statusStyle: { color: st.c },
+        dot: { width: '9px', height: '9px', borderRadius: '50%', background: st.dot, flex: '0 0 9px', animation: st.pulse ? 'pulseDot 1.4s infinite' : 'none' },
+        open: () => this.setState({ view: 'board', selectedId: t.id }),
+      };
+    });
+
+    // Selected ticket
+    let sel = null;
+    const selT = this.state.tickets.find(t => t.id === this.state.selectedId);
+    if (selT) {
+      const d = this.decorate(selT);
+      const laneObj = this.lanes.find(l => l.id === selT.lane) || {};
+      const sess = this.state.sessions[selT.id] || this.buildSession(selT);
+      const roleStyles = {
+        user:      { wrapBg: '#fdf3ea', border: '#f6dcc4', role: '#c2410c', text: '#3a3630' },
+        assistant: { wrapBg: '#fff', border: '#eeebe4', role: '#57534e', text: '#3a3630' },
+        system:    { wrapBg: 'transparent', border: 'transparent', role: '#a8a29a', text: '#8a847c' },
+        tool:      { wrapBg: '#1c1a17', border: '#1c1a17', role: '#f0a868', text: '#d9d5cd' },
+        source:    { wrapBg: '#f4f2ee', border: '#e7e3db', role: '#78716c', text: '#57534e' },
+      };
+      const session = sess.map(m => {
+        const rs = roleStyles[m.role] || roleStyles.assistant;
+        const mono = m.role === 'tool';
+        return {
+          role: m.role,
+          text: m.text,
+          wrap: { background: rs.wrapBg, border: '1px solid ' + rs.border, borderRadius: '10px', padding: '10px 12px' },
+          roleStyle: { fontFamily: "'JetBrains Mono', monospace", fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: rs.role, marginBottom: '5px' },
+          textStyle: { fontFamily: mono ? "'JetBrains Mono', monospace" : 'inherit', fontSize: mono ? '11px' : '12.5px', lineHeight: 1.55, color: rs.text, whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
+        };
+      });
+      sel = {
+        ...d, laneName: laneObj.name, laneDot: { background: laneObj.accent },
+        sessionId: 'sess_' + selT.ref.toLowerCase().replace('-', ''),
+        session,
+      };
+    }
+
+    return {
+      dragTrue: true,
+      nav,
+      isBoard: view === 'board', isSources: view === 'sources', isAutomations: view === 'automations', isSetup: view === 'setup',
+      handleNav: this.handleNav, goBoard: this.goBoard, goSetup: this.goSetup, noop: this.noop,
+      lanesData,
+      handleDragStart: this.handleDragStart, handleDragOver: this.handleDragOver, handleDrop: this.handleDrop, handleDragEnd: this.handleDragEnd,
+      openTicket: this.openTicket, closeTicket: this.closeTicket,
+      showActivity: this.state.showActivity, toggleActivity: this.toggleActivity,
+      runSources: this.runSources,
+      activity,
+      sources: sourceCards, addSources, sourcePrompt: this.sourcePrompt,
+      rulesData, sessions,
+      showDrawer: !!sel, sel: sel || {},
+      composerRef: this.composerRef, sendMessage: this.sendMessage,
+      toasts: this.state.toasts,
+    };
+  }
+
+  openTicket(e) {
+    const id = e.currentTarget.getAttribute('data-id');
+    this.setState(s => {
+      const sessions = { ...s.sessions };
+      const t = s.tickets.find(x => x.id === id);
+      if (t && !sessions[id]) sessions[id] = this.buildSession(t);
+      return { selectedId: id, sessions };
+    });
+  }
+
+  sendMessage() {
+    const el = this.composerRef.current;
+    if (!el) return;
+    const text = (el.value || '').trim();
+    const id = this.state.selectedId;
+    if (!text || !id) return;
+    el.value = '';
+    this.setState(s => {
+      const sessions = { ...s.sessions };
+      const cur = sessions[id] ? sessions[id].slice() : this.buildSession(s.tickets.find(x => x.id === id));
+      cur.push({ role: 'user', text });
+      cur.push({ role: 'assistant', text: 'Got it — folding that into the session and re-planning the next step.' });
+      sessions[id] = cur;
+      return { sessions };
+    });
+  }
+}
+</script>
+</body>
+</html>

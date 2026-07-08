@@ -390,6 +390,8 @@ const commands = {
         if (res.ok) {
           state.connectors ??= {};
           state.connectors.claude = { ...state.connectors.claude, verified: nowIso() };
+          // re-probe so the stored status (connected/detail) reflects the verify
+          state.connectors = { ...state.connectors, ...checkConnectors(board, state) };
           saveState(root, state);
           console.log(paint.bold('✓ Claude auth works') + paint.dim(` (session ${res.session ?? '?'})`));
         } else {

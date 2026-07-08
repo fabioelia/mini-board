@@ -226,19 +226,31 @@ Cards are addressed by id (`mb-3`), bare number (`3`), or any unique title subst
 
 ## The web board
 
-`mb web` serves a local, zero-build UI: swimlane rows × lifecycle columns, drag-and-drop moves
-(firing the same actions as `mb move`), attention badges with reasons, and a card drawer showing
-refs, PR state, the session trail, and the activity log — plus **Comment**, **Fire to session ⚡**,
-and **New agent 🤖** buttons. State on disk stays the source of truth: the CLI and the web UI can
-be used side by side, and the page just re-reads the files.
+`mb web` serves a local, zero-build UI (implementing the `Swimlane Board` Claude Design mockup —
+source in `docs/design/`) with four views behind a sidebar:
 
-On a blank board the **Sources panel** opens first: connector tiles with live status, copyable
-setup commands and a **Verify auth** button, and source tiles with their prompts, **Pull now**,
-and a **+ New source** editor that writes back to `board.yml`.
+- **Board** — lanes with accent dots and **⚡ ON ENTER** automation chips, drag-and-drop moves
+  that fire the same actions as `mb move` (with a dark "Automation fired" toast), per-card status
+  (needs attention / agent working / CI running / sessions), and a live **Automation activity**
+  rail built from every card's log.
+- **Sources** — connected-tool cards with real probe status, dashed add-tiles for missing
+  connectors, and one editable prompt card per source with **Run now** and last-run results.
+- **Automations** — every column's `on_enter`/`on_leave` actions as lane-to-lane rule cards.
+- **Connection** — Claude status with **Verify auth** / **Re-check**, run stats, and every
+  captured session (click one to jump to its card).
 
-![the sources panel](docs/web-sources.png)
+Clicking a card opens the **drawer**: type/source chips, attention reasons, PR state, and the
+card's history rendered as a session transcript — your comments, automation runs (dark tool
+style), syncs, and source events. The composer at the bottom **messages the live session**
+(`comment --fire`; starts a fresh agent when the card has no session yet), with quiet secondary
+actions for comment-only, new agent, flag, and archive. State on disk stays the source of truth:
+the CLI and the web UI can be used side by side.
+
+![the board](docs/web-board.png)
 
 ![the card drawer](docs/web-drawer.png)
+
+![sources](docs/web-sources.png)
 
 ## Attention: what gets called out, and why
 

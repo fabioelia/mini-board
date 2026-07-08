@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mini-board</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>" />
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel-2: #1c2230; --border: #2b3240;
+    --text: #e6e9ef; --dim: #8b94a7; --accent: #6ea8fe; --red: #ff6b6b;
+    --green: #51cf66; --yellow: #ffd43b; --magenta: #da77f2; --cyan: #66d9e8;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  header .spacer { flex: 1; }
+  .pill {
+    font-size: 12px; padding: 2px 9px; border-radius: 99px;
+    border: 1px solid var(--border); color: var(--dim); background: var(--panel);
+  }
+  .pill.warn { color: #fff; background: #7a2e2e; border-color: #a04040; }
+  button {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: #24406e; border-color: #3b6db3; }
+  button.danger { border-color: #a04040; color: #ffb4b4; }
+  button:disabled { opacity: .5; cursor: default; }
+  main { padding: 14px 16px 60px; overflow-x: auto; }
+  .lane-label {
+    color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+    margin: 14px 2px 6px;
+  }
+  .columns { display: flex; gap: 10px; align-items: flex-start; min-width: min-content; }
+  .col {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    width: 250px; min-width: 250px; padding: 8px; min-height: 60px;
+  }
+  .col.drag-over { border-color: var(--accent); background: #182238; }
+  .col h2 {
+    font-size: 12px; margin: 2px 4px 8px; color: var(--dim); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between;
+  }
+  .card {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; margin-bottom: 8px; cursor: grab; position: relative;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card .id { color: var(--dim); font-size: 11px; font-family: ui-monospace, monospace; }
+  .card .title { margin: 2px 0 4px; font-weight: 550; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 5px; font-size: 11px; color: var(--dim); }
+  .tag { border: 1px solid var(--border); border-radius: 5px; padding: 0 5px; background: var(--panel); }
+  .tag.pr-open { color: var(--accent); }
+  .tag.pr-merged { color: var(--magenta); }
+  .tag.pr-closed { color: var(--dim); }
+  .tag.ok { color: var(--green); }
+  .tag.bad { color: var(--red); border-color: #7a2e2e; }
+  .tag.pend { color: var(--yellow); }
+  .tag.sess { color: var(--cyan); }
+  .att-dot {
+    position: absolute; top: -6px; right: -6px; background: var(--red); color: #1a0000;
+    font-size: 11px; font-weight: 700; border-radius: 99px; min-width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  }
+  .att-reasons { margin-top: 6px; font-size: 11.5px; color: var(--red); }
+  .att-reasons div { margin-top: 2px; }
+  /* drawer */
+  #overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 9; }
+  #drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 92vw); background: var(--panel);
+    border-left: 1px solid var(--border); z-index: 10; display: none; flex-direction: column;
+  }
+  #drawer.open, #overlay.open { display: flex; }
+  #overlay.open { display: block; }
+  #drawer .head { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  #drawer .body { padding: 12px 16px; overflow-y: auto; flex: 1; }
+  #drawer .foot { padding: 12px 16px; border-top: 1px solid var(--border); }
+  #drawer h3 { margin: 4px 0 2px; font-size: 16px; }
+  .kv { font-size: 12.5px; color: var(--dim); margin: 2px 0; word-break: break-all; }
+  .kv a { color: var(--accent); text-decoration: none; }
+  .section { margin: 14px 0 4px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .logline { font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+  .logline .t { color: var(--dim); font-size: 11px; font-family: ui-monospace, monospace; }
+  .logline .k { color: var(--yellow); margin-right: 4px; }
+  .sess-line { font-size: 12.5px; font-family: ui-monospace, monospace; color: var(--cyan); padding: 2px 0; word-break: break-all; }
+  .sess-line span { color: var(--dim); font-family: inherit; }
+  textarea, input, select {
+    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 9px; font: inherit; margin-bottom: 8px;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  #toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 16px; display: none; z-index: 20; max-width: 80vw;
+  }
+  #modal {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 15;
+    background: rgba(0,0,0,.45);
+  }
+  #modal.open { display: flex; }
+  #modal .box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; width: min(440px, 92vw);
+  }
+  #modal h3 { margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="board-name">mini-board</h1>
+  <span class="pill" id="att-pill">…</span>
+  <span class="spacer"></span>
+  <button id="btn-add">+ Card</button>
+  <button id="btn-sync">Sync PRs</button>
+</header>
+<main id="main"></main>
+
+<div id="overlay"></div>
+<aside id="drawer">
+  <div class="head">
+    <div class="id kv" id="d-id"></div>
+    <h3 id="d-title"></h3>
+    <div class="kv" id="d-sub"></div>
+  </div>
+  <div class="body" id="d-body"></div>
+  <div class="foot">
+    <textarea id="d-comment" placeholder="Leave a comment… (Fire sends it into the card's latest Claude session)"></textarea>
+    <div class="row">
+      <button id="d-btn-comment">Comment</button>
+      <button id="d-btn-fire" class="primary">Fire to session ⚡</button>
+      <button id="d-btn-agent">New agent 🤖</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="d-btn-flag">Flag</button>
+      <button id="d-btn-unflag">Clear flags</button>
+      <button id="d-btn-archive" class="danger">Archive</button>
+    </div>
+  </div>
+</aside>
+
+<div id="modal">
+  <div class="box">
+    <h3>New card</h3>
+    <input id="m-title" placeholder="Title" />
+    <div class="row">
+      <select id="m-type">
+        <option value="">type: auto</option>
+        <option value="pr">pr</option><option value="ticket">ticket</option>
+        <option value="slack">slack</option><option value="task">task</option>
+      </select>
+      <select id="m-col"></select>
+    </div>
+    <input id="m-pr" placeholder="PR url / repo#123 / 123" />
+    <div class="row">
+      <input id="m-ticket" placeholder="Ticket (NP-1234)" />
+      <input id="m-project" placeholder="Project" />
+    </div>
+    <input id="m-slack" placeholder="Slack thread URL" />
+    <textarea id="m-note" placeholder="First note (optional)"></textarea>
+    <div class="row">
+      <button id="m-cancel">Cancel</button>
+      <button id="m-save" class="primary">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let DATA = null;
+let openCardId = null;
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+function toast(msg, ms = 2600) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => (el.style.display = 'none'), ms);
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body
+    ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+    : undefined);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function age(iso) {
+  const ms = Date.now() - Date.parse(iso);
+  if (ms < 60e3) return 'now';
+  if (ms < 36e5) return Math.floor(ms / 6e4) + 'm';
+  if (ms < 864e5) return Math.floor(ms / 36e5) + 'h';
+  return Math.floor(ms / 864e5) + 'd';
+}
+
+function prTags(card) {
+  const tags = [];
+  if (card.refs?.pr) {
+    const pr = card.pr_state;
+    if (!pr) tags.push('<span class="tag pr-open">PR</span>');
+    else if (pr.state === 'MERGED') tags.push('<span class="tag pr-merged">PR merged</span>');
+    else if (pr.state === 'CLOSED') tags.push('<span class="tag pr-closed">PR closed</span>');
+    else {
+      tags.push(`<span class="tag pr-open">PR${pr.draft ? ' draft' : ''}</span>`);
+      if (pr.checks === 'failing') tags.push('<span class="tag bad">ci ✗</span>');
+      else if (pr.checks === 'passing') tags.push('<span class="tag ok">ci ✓</span>');
+      else if (pr.checks === 'pending') tags.push('<span class="tag pend">ci …</span>');
+      if (pr.review === 'APPROVED') tags.push('<span class="tag ok">approved</span>');
+      if (pr.review === 'CHANGES_REQUESTED') tags.push('<span class="tag bad">changes req</span>');
+    }
+  }
+  if (card.refs?.ticket) tags.push(`<span class="tag">${esc(card.refs.ticket)}</span>`);
+  if (card.refs?.slack) tags.push('<span class="tag">slack</span>');
+  if (card.sessions?.length) tags.push(`<span class="tag sess">⚡ ${card.sessions.length}</span>`);
+  tags.push(`<span class="tag">${age(card.updated)}</span>`);
+  return tags.join('');
+}
+
+function cardHtml(card) {
+  const att = card.attention || [];
+  return `<div class="card" draggable="true" data-id="${card.id}">
+    ${att.length ? `<div class="att-dot">${att.length}</div>` : ''}
+    <div class="id">${card.id}</div>
+    <div class="title">${esc(card.title)}</div>
+    <div class="meta">${prTags(card)}</div>
+    ${att.length ? `<div class="att-reasons">${att.slice(0, 3).map((a) => `<div>⚠ ${esc(a.reason)}</div>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function render() {
+  const { board, cards } = DATA;
+  document.title = board.name;
+  $('#board-name').textContent = board.name;
+  const pill = $('#att-pill');
+  pill.textContent = DATA.attention_count ? `⚠ ${DATA.attention_count} need attention` : 'all clear ✨';
+  pill.className = 'pill' + (DATA.attention_count ? ' warn' : '');
+
+  const groupBy = board.group_by;
+  const lanes = groupBy === 'none'
+    ? ['']
+    : [...new Set(cards.map((c) => String(c[groupBy] ?? 'other')))].sort();
+
+  const main = $('#main');
+  main.innerHTML = lanes.map((lane) => {
+    const laneCards = lane === '' ? cards : cards.filter((c) => String(c[groupBy] ?? 'other') === lane);
+    return `
+      ${lane ? `<div class="lane-label">${esc(lane)}</div>` : ''}
+      <div class="columns">
+        ${board.columns.map((col) => {
+          const colCards = laneCards.filter((c) => c.column === col.id);
+          return `<div class="col" data-col="${col.id}" data-lane="${esc(lane)}">
+            <h2><span>${esc(col.title)}</span><span>${colCards.length}</span></h2>
+            ${colCards.map(cardHtml).join('')}
+          </div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+
+  // column select in the add-modal
+  $('#m-col').innerHTML = board.columns
+    .map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
+
+  wireDnd();
+  main.querySelectorAll('.card').forEach((el) => {
+    el.addEventListener('click', () => openDrawer(el.dataset.id));
+  });
+  if (openCardId) fillDrawer(openCardId);
+}
+
+function wireDnd() {
+  document.querySelectorAll('.card').forEach((el) => {
+    el.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', el.dataset.id);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+  });
+  document.querySelectorAll('.col').forEach((col) => {
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+    col.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      const target = col.dataset.col;
+      const card = DATA.cards.find((c) => c.id === id);
+      if (!card || card.column === target) return;
+      try {
+        const res = await api('/api/move', { card: id, column: target });
+        DATA = res;
+        render();
+        const acts = (res.actions || []).filter(Boolean);
+        if (acts.length) {
+          const bad = acts.find((a) => a.error || a.ok === false);
+          toast(bad ? `moved, but action failed: ${bad.error || bad.cmd}` : `moved → ${target} · fired ${acts.length} action(s)`);
+        } else toast(`moved → ${target}`);
+      } catch (err) { toast('move failed: ' + err.message); }
+    });
+  });
+}
+
+function refLink(label, url) {
+  if (!url) return '';
+  const href = /^https?:/.test(url) ? url : null;
+  return `<div class="kv">${label}: ${href ? `<a href="${esc(href)}" target="_blank">${esc(url)}</a>` : esc(url)}</div>`;
+}
+
+function fillDrawer(id) {
+  const card = DATA.cards.find((c) => c.id === id);
+  if (!card) { closeDrawer(); return; }
+  $('#d-id').textContent = `${card.id} · ${card.type} · ${card.column}${card.project ? ' · ' + card.project : ''}`;
+  $('#d-title').textContent = card.title;
+  $('#d-sub').textContent = `created ${age(card.created)} ago · updated ${age(card.updated)} ago`;
+
+  const att = card.attention || [];
+  const pr = card.pr_state;
+  $('#d-body').innerHTML = `
+    ${att.length ? `<div class="section">Attention</div><div class="att-reasons">${att.map((a) => `<div>⚠ ${esc(a.reason)}</div>`).join('')}</div>` : ''}
+    <div class="section">Refs</div>
+    ${refLink('PR', card.refs?.pr) + refLink('Ticket', card.refs?.ticket) + refLink('Slack', card.refs?.slack) || '<div class="kv">none</div>'}
+    ${pr ? `<div class="section">PR state</div>
+      <div class="kv">${esc(pr.state)}${pr.draft ? ' (draft)' : ''} · review=${esc(pr.review)} · checks=${esc(pr.checks)} · mergeable=${esc(pr.mergeable)}</div>` : ''}
+    <div class="section">Claude sessions (newest last)</div>
+    ${(card.sessions || []).map((s) =>
+      `<div class="sess-line">${esc(s.id)} <span>— ${esc(s.label || '')}</span></div>`).join('') || '<div class="kv">none yet — "New agent" starts one</div>'}
+    ${card.pending_session_logs?.length ? `<div class="kv">⏳ ${card.pending_session_logs.length} agent log(s) pending session capture</div>` : ''}
+    <div class="section">Activity</div>
+    ${(card.log || []).slice(-30).reverse().map((e) =>
+      `<div class="logline"><span class="t">${esc(e.at.replace('T', ' ').slice(0, 16))}</span> <span class="k">${esc(e.kind)}</span>${esc(e.text)}</div>`).join('')}
+  `;
+}
+
+function openDrawer(id) {
+  openCardId = id;
+  fillDrawer(id);
+  $('#drawer').classList.add('open');
+  $('#overlay').classList.add('open');
+}
+function closeDrawer() {
+  openCardId = null;
+  $('#drawer').classList.remove('open');
+  $('#overlay').classList.remove('open');
+}
+
+async function drawerAction(fn, okMsg) {
+  try {
+    const res = await fn();
+    DATA = res;
+    render();
+    if (res.fired) {
+      toast(res.fired.error ? `failed: ${res.fired.error}` : (res.fired.background ? okMsg + ' (agent running in background)' : okMsg));
+    } else toast(okMsg);
+  } catch (err) { toast('failed: ' + err.message); }
+}
+
+$('#overlay').addEventListener('click', closeDrawer);
+$('#d-btn-comment').addEventListener('click', () => {
+  const text = $('#d-comment').value.trim();
+  if (!text || !openCardId) return;
+  drawerAction(() => api('/api/comment', { card: openCardId, text }), 'comment added');
+  $('#d-comment').value = '';
+});
+$('#d-btn-fire').addEventListener('click', () => {
+  const text = $('#d-comment').value.trim();
+  if (!text || !openCardId) return toast('write the comment to fire first');
+  drawerAction(() => api('/api/comment', { card: openCardId, text, fire: true }), 'fired into Claude session ⚡');
+  $('#d-comment').value = '';
+});
+$('#d-btn-agent').addEventListener('click', () => {
+  if (!openCardId) return;
+  const text = $('#d-comment').value.trim();
+  drawerAction(() => api('/api/agent', { card: openCardId, instruction: text }), 'new agent launched 🤖');
+  $('#d-comment').value = '';
+});
+$('#d-btn-flag').addEventListener('click', () => {
+  const reason = prompt('Flag reason:');
+  if (!reason || !openCardId) return;
+  drawerAction(() => api('/api/flag', { card: openCardId, reason }), 'flagged');
+});
+$('#d-btn-unflag').addEventListener('click', () => {
+  if (!openCardId) return;
+  drawerAction(() => api('/api/flag', { card: openCardId, clear: true }), 'flags cleared');
+});
+$('#d-btn-archive').addEventListener('click', () => {
+  if (!openCardId || !confirm('Archive this card?')) return;
+  const id = openCardId;
+  closeDrawer();
+  drawerAction(() => api('/api/archive', { card: id }), 'archived');
+});
+
+$('#btn-sync').addEventListener('click', async () => {
+  const btn = $('#btn-sync');
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  try {
+    const res = await api('/api/sync', {});
+    DATA = res;
+    render();
+    const moved = (res.results || []).filter((r) => r.moved);
+    toast(`synced ${res.results.length} PR(s)` + (moved.length ? ` · auto-moved ${moved.map((m) => m.id).join(', ')}` : ''));
+  } catch (err) { toast('sync failed: ' + err.message, 5000); }
+  btn.disabled = false; btn.textContent = 'Sync PRs';
+});
+
+$('#btn-add').addEventListener('click', () => $('#modal').classList.add('open'));
+$('#m-cancel').addEventListener('click', () => $('#modal').classList.remove('open'));
+$('#m-save').addEventListener('click', async () => {
+  const title = $('#m-title').value.trim();
+  if (!title) return toast('title required');
+  try {
+    const res = await api('/api/add', {
+      title,
+      type: $('#m-type').value || undefined,
+      column: $('#m-col').value,
+      pr: $('#m-pr').value.trim(),
+      ticket: $('#m-ticket').value.trim(),
+      slack: $('#m-slack').value.trim(),
+      project: $('#m-project').value.trim(),
+      note: $('#m-note').value.trim(),
+    });
+    DATA = res;
+    render();
+    $('#modal').classList.remove('open');
+    ['#m-title', '#m-pr', '#m-ticket', '#m-slack', '#m-project', '#m-note'].forEach((s) => ($(s).value = ''));
+    toast(`${res.id} added`);
+  } catch (err) { toast('add failed: ' + err.message); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeDrawer(); $('#modal').classList.remove('open'); }
+});
+
+async function refresh() {
+  try {
+    DATA = await api('/api/board');
+    render();
+  } catch (err) { toast('load failed: ' + err.message); }
+}
+refresh();
+setInterval(() => { if (!openCardId) refresh(); }, 15000);
+</script>
+</body>
+</html>

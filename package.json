@@ -1,0 +1,20 @@
+{
+  "name": "mini-board",
+  "version": "0.1.0",
+  "description": "A tiny YAML-driven kanban for tracking PRs, tickets, and Slack asks through an agent-assisted lifecycle — with Claude session tracking, attention callouts, and column actions.",
+  "type": "module",
+  "bin": {
+    "mini-board": "./src/cli.js",
+    "mb": "./src/cli.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "yaml": "^2.4.5"
+  },
+  "license": "MIT"
+}

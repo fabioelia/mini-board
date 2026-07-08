@@ -1,0 +1,4 @@
+node_modules/
+.mini-board/
+*.log
+.DS_Store

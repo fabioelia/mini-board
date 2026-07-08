@@ -1,0 +1,85 @@
+# mini-board configuration — this file drives the board.
+# State (the cards) lives next door in state.yml; this file is yours to edit.
+
+board:
+  name: My Work
+  # Swimlanes: group cards into horizontal lanes by a field.
+  # "type" (pr / ticket / slack / task), "project", or "none".
+  group_by: type
+
+defaults:
+  # Lets PR refs be bare numbers ("--pr 1234") instead of full URLs.
+  repo: your-org/your-repo
+  # Prefix for non-URL ticket refs, used by `mb open <card> ticket`.
+  ticket_url: https://your-org.atlassian.net/browse/
+  # Default project for new cards (optional).
+  # project: main
+
+# The lifecycle, left to right. Column knobs:
+#   attention: true      -> every card here is always called out (triage columns)
+#   stale_after: 4h      -> call out cards with no activity for this long (m/h/d/w)
+#   on_enter / on_leave  -> shell commands fired when a card moves in/out.
+#     Templates use {{card.id}} {{card.title}} {{card.pr}} {{card.ticket}}
+#     {{card.slack}} {{card.session}} {{card.context}} {{prompt}} {{message}}
+#     {{from}} {{to}}. Values are shell-escaped for you — do NOT add quotes.
+#     The same values are exported as $MB_CARD_ID, $MB_PR, $MB_SESSION, ...
+#     Options per action: background: true (don't block; log to .mini-board/logs)
+#     and capture_session: true (harvest the Claude session_id from the output).
+columns:
+  - id: inbox
+    title: Inbox
+    attention: true            # new asks always need triage
+
+  - id: agent
+    title: Agent Working
+    stale_after: 4h            # agent quiet for 4h? probably stuck
+    on_enter:
+      # Fire an agent with the card's full context the moment you drag it here.
+      - run: claude -p {{prompt}} --output-format json
+        background: true
+        capture_session: true
+
+  - id: waiting-pr
+    title: Waiting on PR
+    stale_after: 24h           # PR sitting untouched for a day
+
+  - id: follow-up
+    title: Needs Follow-up
+    attention: true            # by definition: you owe it another round
+
+  - id: review
+    title: In Review
+    stale_after: 48h           # nudge reviewers after two days
+
+  - id: merged
+    title: Merged · Verify
+    stale_after: 3d            # merged but unverified for 3 days
+    # on_enter:
+    #   - run: ./scripts/run-e2e.sh {{card.pr}}
+    #     background: true
+
+  - id: done
+    title: Done
+
+# `mb sync` pulls live PR state via the gh CLI and can move cards for you.
+sync:
+  auto_move:
+    pr_merged: merged
+    pr_closed: done
+
+# Named actions. These defaults are built in — override them here if you want
+# different flags, a wrapper script, a different model, etc.
+actions:
+  # `mb comment <card> "..." --fire` → resumes the card's latest Claude session.
+  fire_comment:
+    run: claude --resume {{card.session}} -p {{message}} --output-format json
+    background: true
+    capture_session: true
+  # `mb agent <card> ["instruction"]` → brand-new Claude session, full card context.
+  new_agent:
+    run: claude -p {{prompt}} --output-format json
+    background: true
+    capture_session: true
+  # Ideas:
+  # notify_slack:
+  #   run: curl -s -X POST $SLACK_WEBHOOK -d "{\"text\": $MB_MESSAGE}"

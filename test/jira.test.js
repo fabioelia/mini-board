@@ -10,7 +10,7 @@ import {
   runJiraSync, harvestJiraSync, pushJiraTransition,
   reconcileLanes, applyLaneConfig, pushJiraComment, pushJiraLabel,
   pushJiraCreate, harvestJiraCreates, serializeBoardConfig, pushJiraConfig,
-  applyFullBoardConfig, parseConfigYaml,
+  applyFullBoardConfig, parseConfigYaml, extractSessionActivity, pushSessionProgress,
 } from '../src/jira.js';
 
 const board = {
@@ -339,6 +339,56 @@ test('parseConfigYaml unwraps fences and tolerates junk', () => {
   assert.deepEqual(parseConfigYaml('```yaml\ncolumns:\n  - id: a\n```'), { columns: [{ id: 'a' }] });
   assert.deepEqual(parseConfigYaml('lanes: {}'), { lanes: {} });
   assert.equal(parseConfigYaml('a: [unclosed'), null);
+});
+
+test('extractSessionActivity: last assistant text wins, tool call as fallback', () => {
+  const lines = [
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'Reading the ticket' }] } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash' }] } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'Opening a PR now' }] } }),
+    'not json at all',
+  ].join('\n');
+  assert.equal(extractSessionActivity(lines), 'Opening a PR now');
+  const toolsOnly = JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Grep' }] } });
+  assert.equal(extractSessionActivity(toolsOnly), 'running tool: Grep');
+  assert.equal(extractSessionActivity('junk'), null);
+});
+
+test('pushSessionProgress: announces start, throttles updates, cleans up after the run', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mb-jira-'));
+  const on = { ...board, jira: { ...board.jira, comments: true } };
+  const state = makeState();
+  const card = state.cards['mb-1'];
+  const t0 = Date.parse('2026-01-01T00:00:00Z');
+
+  // no running session → nothing
+  assert.equal(pushSessionProgress(root, on, state, t0), null);
+
+  // running session on a ticketed card → start comment once
+  fs.mkdirSync(path.join(root, '.mini-board/logs'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.mini-board/logs/run.log'), '');
+  card.pending_session_logs = ['.mini-board/logs/run.log'];
+  assert.deepEqual(pushSessionProgress(root, on, state, t0), [{ id: 'mb-1', kind: 'started' }]);
+  assert.match(card.log.at(-1).text, /posting run summary/);
+  assert.equal(pushSessionProgress(root, on, state, t0 + 1000), null); // throttled
+
+  // activity after the window → progress comment
+  fs.appendFileSync(path.join(root, '.mini-board/logs/run.log'),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'Writing tests' }] } }) + '\n');
+  card.jira_progress.last_push = '2026-01-01T00:00:00Z';
+  assert.deepEqual(pushSessionProgress(root, on, state, t0 + 6 * 60_000), [{ id: 'mb-1', kind: 'progress' }]);
+  // same activity again → quiet
+  card.jira_progress.last_push = '2026-01-01T00:00:00Z';
+  assert.equal(pushSessionProgress(root, on, state, t0 + 12 * 60_000), null);
+
+  // run finished → marker cleaned up
+  delete card.pending_session_logs;
+  pushSessionProgress(root, on, state, t0 + 13 * 60_000);
+  assert.equal(card.jira_progress, undefined);
+
+  // comments gate off → fully silent
+  card.pending_session_logs = ['.mini-board/logs/run.log'];
+  assert.equal(pushSessionProgress(root, board, state, t0), null);
 });
 
 test('pushJiraComment / pushJiraLabel respect config gates', () => {

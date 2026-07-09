@@ -401,6 +401,63 @@ export function pushJiraComment(root, board, state, id, text) {
   return { log };
 }
 
+// Latest meaningful activity in a claude stream-json log: the last assistant
+// text block, or failing that the last tool call — "what is the agent doing".
+export function extractSessionActivity(text) {
+  let lastText = null;
+  let lastTool = null;
+  for (const line of String(text ?? '').split('\n')) {
+    if (!line.trim().startsWith('{')) continue;
+    let o = null;
+    try { o = JSON.parse(line); } catch { continue; }
+    const content = o?.message?.content;
+    if (o?.type !== 'assistant' || !Array.isArray(content)) continue;
+    for (const b of content) {
+      if (b?.type === 'text' && b.text?.trim()) lastText = b.text.trim();
+      else if (b?.type === 'tool_use' && b.name) lastTool = b.name;
+    }
+  }
+  return lastText ?? (lastTool ? `running tool: ${lastTool}` : null);
+}
+
+// Live run visibility ON the ticket: when a session starts on a ticketed
+// card, announce it as a comment; while it runs, push the agent's latest
+// activity at most once per PROGRESS_EVERY_MS. The existing completion
+// summary (applyFlow → pushJiraComment) closes the thread. Rides the
+// jira.comments gate; called from every harvest tick.
+const PROGRESS_EVERY_MS = 5 * 60_000;
+
+export function pushSessionProgress(root, board, state, now = Date.now()) {
+  const cfg = jiraConfig(board);
+  if (!cfg.enabled || !cfg.comments) return null;
+  const pushed = [];
+  for (const [id, card] of Object.entries(state.cards)) {
+    const logs = card.pending_session_logs;
+    if (!logs?.length || card.archived || !card.refs?.ticket) {
+      if (card.jira_progress) delete card.jira_progress; // run over — completion comment takes it from here
+      continue;
+    }
+    const logRel = logs.at(-1);
+    let p = card.jira_progress;
+    if (!p || p.log !== logRel) {
+      card.jira_progress = { log: logRel, last_push: nowIso() };
+      pushJiraComment(root, board, state, id, `▶️ agent run started — progress updates will follow on this issue`);
+      pushed.push({ id, kind: 'started' });
+      continue;
+    }
+    if (now - Date.parse(p.last_push) < PROGRESS_EVERY_MS) continue;
+    let text = null;
+    try { text = fs.readFileSync(path.join(root, logRel), 'utf8'); } catch { continue; }
+    const activity = extractSessionActivity(text);
+    p.last_push = nowIso(); // even when quiet — don't re-read every tick
+    if (!activity || activity === p.last_activity) continue; // nothing new to say
+    p.last_activity = activity;
+    pushJiraComment(root, board, state, id, `⏳ still working: ${activity.slice(0, 500)}`);
+    pushed.push({ id, kind: 'progress' });
+  }
+  return pushed.length ? pushed : null;
+}
+
 // Paused / unpaused state → an mb-paused label on the issue.
 export function pushJiraLabel(root, board, state, id, label, add = true) {
   const cfg = jiraConfig(board);

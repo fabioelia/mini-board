@@ -26,7 +26,7 @@ import { harvestEnrich } from './surface.js';
 import { applyFlow } from './flow.js';
 import {
   runJiraSync, harvestJiraSync, harvestJiraCreates, pushJiraTransition, pushJiraCreate,
-  pushJiraConfig, jiraConfig,
+  pushJiraConfig, jiraConfig, pushSessionProgress,
 } from './jira.js';
 
 const HELP = `mini-board — a tiny YAML-driven board for PRs, tickets, and Slack asks
@@ -130,7 +130,8 @@ function harvest(root, board, state) {
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
   const filed = harvestJiraCreates(root, state);
-  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed) saveState(root, state);
+  const progress = pushSessionProgress(root, board, state);
+  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed || progress) saveState(root, state);
   for (const f of filed ?? []) console.log(paint.dim(`${f.id} filed in Jira as ${f.key}`));
   if (jira) {
     console.log(jira.ok ? paint.dim(`jira sync finished: ${jira.summary}`) : paint.red(`jira sync failed: ${jira.error}`));

@@ -21,7 +21,7 @@ import { runEnrich, harvestEnrich, surfaceConfig } from './surface.js';
 import { applyFlow } from './flow.js';
 import {
   runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate,
-  harvestJiraCreates, pushJiraConfig,
+  harvestJiraCreates, pushJiraConfig, pushSessionProgress,
 } from './jira.js';
 import { nowIso, parseDuration } from './util.js';
 
@@ -37,7 +37,8 @@ function boardPayload(root) {
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
   const filed = harvestJiraCreates(root, state);
-  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed) saveState(root, state);
+  const progress = pushSessionProgress(root, board, state);
+  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed || progress) saveState(root, state);
   const cards = Object.entries(state.cards)
     .filter(([, c]) => !c.archived)
     .map(([id, card]) => ({ id, ...card, attention: computeAttention(board, card) }));

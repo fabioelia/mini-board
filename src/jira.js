@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import YAML from 'yaml';
-import { BOARD_FILE, ensureLogDir, loadBoard, logEntry, moveCard, getColumn, createCard } from './store.js';
+import { BOARD_FILE, ensureLogDir, loadBoard, logEntry, moveCard, getColumn, createCard, latestSession } from './store.js';
 import { extractResultJson, normKey } from './sources.js';
 import { nowIso, shellQuote, claudeFlags } from './util.js';
 
@@ -43,6 +43,7 @@ export function jiraConfig(board) {
     labels: !!j.labels, // paused cards get the mb-paused label
     reconcile: j.reconcile !== false, // cards whose issue leaves the JQL scope get archived
     create_tickets: j.create_tickets !== false, // promoting a ticketless card out of inbox files a Jira issue
+    board_url: j.board_url ?? 'http://localhost:4400', // base for session-viewer links in comments
     instruction: j.instruction ?? '',
   };
 }
@@ -394,7 +395,10 @@ export function pushJiraComment(root, board, state, id, text) {
   const cfg = jiraConfig(board);
   const card = state.cards[id];
   if (!cfg.enabled || !cfg.comments || !card?.refs?.ticket || !text?.trim()) return null;
-  const body = `🤖 mini-board agent (${card.column}): ${text.trim().slice(0, 1200)}`;
+  // clicking through from the ticket to the actual session transcript
+  const sid = latestSession(card)?.id;
+  const link = sid && cfg.board_url ? `\n\n🔗 session: ${cfg.board_url.replace(/\/+$/, '')}/session/${sid}` : '';
+  const body = `🤖 mini-board agent (${card.column}): ${text.trim().slice(0, 1200)}${link}`;
   const prompt = `Using the Atlassian tools, add this comment to Jira issue ${card.refs.ticket}, verbatim:\n\n${body}\n\nReply with one line confirming.`;
   const log = spawnJiraWrite(root, board, `comment-${id}`, prompt);
   logEntry(card, 'jira', `posting run summary to ${card.refs.ticket} (log: ${log})`);

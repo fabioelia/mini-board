@@ -389,6 +389,7 @@
             <input id="j-cfgissue" placeholder="config issue (e.g. NP-1000) — lane config parks in its description" style="flex:2" />
           </div>
           <input id="j-jql" placeholder="JQL (default: assignee = currentUser() AND statusCategory != Done)" style="margin-bottom:8px" />
+          <input id="j-boardurl" placeholder="board URL for session links in comments (default http://localhost:4400)" style="margin-bottom:8px" />
           <div style="margin-bottom:8px">
             <label class="cb"><input type="checkbox" id="j-push"> push board moves to Jira</label>
             <label class="cb"><input type="checkbox" id="j-lanes"> lanes from Jira statuses</label>
@@ -1098,6 +1099,7 @@ function renderJiraPanel() {
   $('#j-labels').checked = !!cfg.labels;
   $('#j-remoteactions').checked = !!cfg.allow_remote_actions;
   $('#j-reconcile').checked = cfg.reconcile !== false;
+  $('#j-boardurl').value = cfg.board_url && cfg.board_url !== 'http://localhost:4400' ? cfg.board_url : '';
   $('#j-createtickets').checked = cfg.create_tickets !== false;
 }
 
@@ -1114,6 +1116,7 @@ $('#j-save').addEventListener('click', async () => {
       labels: $('#j-labels').checked,
       allow_remote_actions: $('#j-remoteactions').checked,
       reconcile: $('#j-reconcile').checked,
+      board_url: $('#j-boardurl').value.trim(),
       create_tickets: $('#j-createtickets').checked,
     });
     jiraDirty = false;
@@ -1324,9 +1327,10 @@ function fillDrawer(id) {
 
   const latest = c.sessions?.length ? c.sessions[c.sessions.length - 1] : null;
   const agentBusy = !!c.pending_session_logs?.length;
+  const sessLink = (s) => `<a href="/session/${esc(s.id)}" target="_blank" title="open session viewer" style="color:inherit">${esc(s.id)}</a>`;
   $('#dw-sess-id').innerHTML = agentBusy
-    ? `${latest ? esc(latest.id) : 'starting…'} <span class="act-live"><span class="d"></span>agent working — reply lands here</span>`
-    : (latest ? esc(latest.id) : 'none yet — Send starts one');
+    ? `${latest ? sessLink(latest) : 'starting…'} <span class="act-live"><span class="d"></span>agent working — reply lands here</span>`
+    : (latest ? sessLink(latest) : 'none yet — Send starts one');
   // "View run": what that session actually did (parsed from its run log)
   $('#dw-run-btn').style.display = (latest || agentBusy) ? '' : 'none';
   $('#dw-reset-btn').style.display = (latest && !agentBusy) ? '' : 'none';

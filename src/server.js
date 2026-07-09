@@ -296,6 +296,47 @@ export function startServer(root, port = 4400) {
         res.end(fs.readFileSync(path.join(WEB_DIR, 'index.html')));
         return;
       }
+      // Standalone session viewer — the URL that Jira comments link to.
+      // Renders the run transcript and live-polls while the run is going.
+      if (req.method === 'GET' && /^\/session\/[A-Za-z0-9-]+$/.test(url.pathname)) {
+        const sid = url.pathname.split('/')[2];
+        const state = loadState(root);
+        const hit = Object.entries(state.cards).find(([, c]) => (c.sessions ?? []).some((s) => s.id === sid));
+        const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (!hit) {
+          res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(`<!doctype html><body style="font-family:ui-monospace,monospace;background:#111;color:#ddd;padding:40px">no card carries session <b>${esc(sid)}</b> — it may predate the board or live in another checkout</body>`);
+          return;
+        }
+        const [cardId, card] = hit;
+        const ticketUrl = card.refs?.ticket ? `${loadBoard(root).defaults?.ticket_url ?? ''}${card.refs.ticket}` : null;
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(card.title)} · session</title>
+<style>
+  body{font-family:ui-monospace,SFMono-Regular,monospace;background:#101014;color:#d6d6dc;margin:0;padding:28px;font-size:13px;line-height:1.5}
+  h1{font-size:15px;margin:0 0 2px} .sub{color:#8a8a94;margin-bottom:18px} .sub a{color:#7dd3c8}
+  .ev{padding:5px 10px;border-left:2px solid #2a2a33;margin:3px 0;white-space:pre-wrap;word-break:break-word}
+  .ev.text{border-color:#0d9488;color:#e8e8ee} .ev.tool{border-color:#7c3aed;color:#b9a8e8}
+  .ev.tool_result{border-color:#3a3a44;color:#8a8a94} .ev.init{border-color:#1d4ed8;color:#93b4f5}
+  .ev.result{border-color:#16a34a;color:#86efac;font-weight:600} .ev.error{border-color:#b91c1c;color:#fca5a5}
+  #status{position:fixed;top:14px;right:18px;color:#8a8a94}.live{color:#34d399}
+</style></head><body>
+<h1>${esc(card.title)}</h1>
+<div class="sub">card ${esc(cardId)} · lane ${esc(card.column)} · session ${esc(sid)}${ticketUrl ? ` · <a href="${esc(ticketUrl)}">${esc(card.refs.ticket)}</a>` : ''} · <a href="/">board</a></div>
+<div id="status">…</div><div id="events"></div>
+<script>
+  const render = (d) => {
+    document.getElementById('status').innerHTML = d.running ? '<span class="live">● live</span>' : 'finished';
+    document.getElementById('events').innerHTML = (d.events || []).map((e) =>
+      '<div class="ev ' + e.kind + '">' + e.text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>').join('');
+    if (d.running) setTimeout(tick, 4000);
+    else if (!(d.events || []).length) document.getElementById('events').textContent = 'no transcript found — the run log may have been cleaned up';
+  };
+  const tick = () => fetch('/api/session/activity?card=${encodeURIComponent(cardId)}&session=${encodeURIComponent(sid)}').then((r) => r.json()).then(render);
+  tick();
+</script></body></html>`);
+        return;
+      }
       if (req.method === 'GET' && url.pathname === '/api/board') {
         json(res, 200, boardPayload(root));
         return;
@@ -449,6 +490,7 @@ export function startServer(root, port = 4400) {
             ...(body.labels ? { labels: true } : {}),
             ...(body.allow_remote_actions ? { allow_remote_actions: true } : {}),
             ...(body.reconcile === false ? { reconcile: false } : {}),
+            ...(String(body.board_url ?? '').trim() ? { board_url: String(body.board_url).trim().replace(/\/+$/, '') } : {}),
             ...(body.create_tickets === false ? { create_tickets: false } : {}),
             ...(String(body.instruction ?? '').trim() ? { instruction: String(body.instruction).trim() } : {}),
           }));

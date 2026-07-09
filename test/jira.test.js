@@ -401,6 +401,10 @@ test('pushJiraComment / pushJiraLabel respect config gates', () => {
   const on = { ...board, jira: { ...board.jira, comments: true, labels: true } };
   assert.ok(pushJiraComment(root, on, state, 'mb-1', 'did the thing').log);
   assert.match(state.cards['mb-1'].log.at(-1).text, /posting run summary to NP-42/);
+  // a session on the card doesn't break the push (comment gains a viewer link)
+  state.cards['mb-1'].sessions = [{ id: 'sess-abc123', at: 'x' }];
+  assert.ok(pushJiraComment(root, on, state, 'mb-1', 'progress update').log);
+  state.cards['mb-1'].sessions = [];
   assert.ok(pushJiraLabel(root, on, state, 'mb-1', 'mb-paused').log);
   assert.match(state.cards['mb-1'].log.at(-1).text, /adding label "mb-paused"/);
   // no ticket ref → nothing even when enabled

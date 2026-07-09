@@ -175,12 +175,34 @@ test('applyLaneConfig: config parked in the Jira issue lands on lanes', () => {
     '    max_visits: 3',
     '```',
   ].join('\n');
-  const { applied, error } = applyLaneConfig(root, b, config);
+  const { applied, error } = applyLaneConfig(root, b, config, true); // remote actions opted in
   assert.equal(error, null);
   assert.deepEqual(applied, ['agent']);
   const reloaded = fs.readFileSync(path.join(root, 'board.yml'), 'utf8');
   assert.match(reloaded, /name: Start Work/);
   assert.match(reloaded, /on_done: review/); // status name resolved to lane id
+});
+
+test('applyLaneConfig: on_enter/on_leave from Jira are ignored without allow_remote_actions', () => {
+  const b = {
+    columns: [{ id: 'agent', title: 'Doing', jira_status: 'In Progress' }],
+  };
+  const root = scratchBoardFile(b.columns);
+  const config = [
+    '```yaml',
+    'lanes:',
+    '  "In Progress":',
+    '    on_enter:',
+    '      - run: rm -rf / # hostile edit to the config issue',
+    '    max_visits: 3',
+    '```',
+  ].join('\n');
+  const { applied, error } = applyLaneConfig(root, b, config); // default: no remote actions
+  assert.equal(error, null);
+  assert.deepEqual(applied, ['agent']);
+  const reloaded = fs.readFileSync(path.join(root, 'board.yml'), 'utf8');
+  assert.doesNotMatch(reloaded, /on_enter/); // command did NOT land
+  assert.match(reloaded, /max_visits: 3/); // declarative bits still apply
   assert.match(reloaded, /max_visits: 3/);
   assert.match(applyLaneConfig(root, b, 'not: yaml: at: all: [').error, /not valid YAML/);
 });

@@ -34,6 +34,7 @@ export function jiraConfig(board) {
     push_moves: j.push_moves !== false,
     lanes_from_jira: !!j.lanes_from_jira, // workflow statuses become lanes
     config_issue: j.config_issue ?? null, // lane automation config parks in this issue's description
+    allow_remote_actions: !!j.allow_remote_actions, // config issue may set on_enter/on_leave (runs shell commands — opt in!)
     comments: !!j.comments, // agent run summaries land as issue comments
     labels: !!j.labels, // paused cards get the mb-paused label
     instruction: j.instruction ?? '',
@@ -154,7 +155,7 @@ export function reconcileLanes(root, board, statuses) {
 //       on_enter: [{ name: Start Work, run: claude -p {{prompt}} …, background: true }]
 //       on_done: In Review          # a STATUS name — resolved to its lane
 //       max_visits: 2
-export function applyLaneConfig(root, board, configText) {
+export function applyLaneConfig(root, board, configText, allowActions = false) {
   let text = String(configText ?? '');
   const fence = /```(?:yaml|yml)?\s*([\s\S]*?)```/.exec(text);
   if (fence) text = fence[1];
@@ -173,8 +174,13 @@ export function applyLaneConfig(root, board, configText) {
     const node = laneId && cols?.items?.find((c) => c?.get?.('id') === laneId);
     if (!node) continue;
     const setOrDelete = (key, val) => (val != null ? node.set(key, doc.createNode(val)) : node.has(key) && node.delete(key));
-    if ('on_enter' in def) setOrDelete('on_enter', Array.isArray(def.on_enter) && def.on_enter.length ? def.on_enter : null);
-    if ('on_leave' in def) setOrDelete('on_leave', Array.isArray(def.on_leave) && def.on_leave.length ? def.on_leave : null);
+    // on_enter/on_leave run SHELL COMMANDS on this machine. Applying them from
+    // a Jira description means anyone with edit rights on that issue can run
+    // code here — so they're ignored unless jira.allow_remote_actions is set.
+    if (allowActions) {
+      if ('on_enter' in def) setOrDelete('on_enter', Array.isArray(def.on_enter) && def.on_enter.length ? def.on_enter : null);
+      if ('on_leave' in def) setOrDelete('on_leave', Array.isArray(def.on_leave) && def.on_leave.length ? def.on_leave : null);
+    }
     if ('on_done' in def) setOrDelete('on_done', def.on_done ? (laneForStatus(board, def.on_done) ?? null) : null);
     if ('max_visits' in def) setOrDelete('max_visits', Number.isInteger(def.max_visits) ? def.max_visits : null);
     if ('instruction' in def && Array.isArray(def.on_enter)) { /* instruction rides inside on_enter entries */ }
@@ -247,7 +253,9 @@ function finishJiraSync(root, board, state, stdout, log = null) {
   const cfg = jiraConfig(board);
   // Jira-held state first: lanes from workflow statuses, then lane config
   const newLanes = cfg.lanes_from_jira && statuses.length ? reconcileLanes(root, board, statuses) : [];
-  const laneCfg = cfg.config_issue && config ? applyLaneConfig(root, board, config) : { applied: [], error: null };
+  const laneCfg = cfg.config_issue && config
+    ? applyLaneConfig(root, board, config, cfg.allow_remote_actions)
+    : { applied: [], error: null };
   const { created, moved, unmapped } = applyIssues(board, state, issues);
   const summary = `${issues.length} issue(s): ${created.length} new, ${moved.length} moved${unmapped ? `, ${unmapped} unmapped` : ''}`
     + `${newLanes.length ? ` · ${newLanes.length} lane(s) created from Jira` : ''}`

@@ -422,6 +422,7 @@ export function startServer(root, port = 4400) {
             ...(String(body.config_issue ?? '').trim() ? { config_issue: String(body.config_issue).trim().toUpperCase() } : {}),
             ...(body.comments ? { comments: true } : {}),
             ...(body.labels ? { labels: true } : {}),
+            ...(body.allow_remote_actions ? { allow_remote_actions: true } : {}),
             ...(String(body.instruction ?? '').trim() ? { instruction: String(body.instruction).trim() } : {}),
           }));
         }

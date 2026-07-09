@@ -394,6 +394,7 @@
             <label class="cb"><input type="checkbox" id="j-lanes"> lanes from Jira statuses</label>
             <label class="cb"><input type="checkbox" id="j-comments"> agent summaries → issue comments</label>
             <label class="cb"><input type="checkbox" id="j-labels"> paused → mb-paused label</label>
+            <label class="cb" title="The config issue may set on_enter/on_leave — shell commands that run on THIS machine. Anyone who can edit that issue can run code here. Leave off unless you trust every editor."><input type="checkbox" id="j-remoteactions"> ⚠ allow on_enter/on_leave from config issue</label>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn-sm ghost" id="j-sync">Sync now</button>
@@ -1093,6 +1094,7 @@ function renderJiraPanel() {
   $('#j-lanes').checked = !!cfg.lanes_from_jira;
   $('#j-comments').checked = !!cfg.comments;
   $('#j-labels').checked = !!cfg.labels;
+  $('#j-remoteactions').checked = !!cfg.allow_remote_actions;
 }
 
 $('#j-save').addEventListener('click', async () => {
@@ -1106,6 +1108,7 @@ $('#j-save').addEventListener('click', async () => {
       config_issue: $('#j-cfgissue').value.trim(),
       comments: $('#j-comments').checked,
       labels: $('#j-labels').checked,
+      allow_remote_actions: $('#j-remoteactions').checked,
     });
     jiraDirty = false;
     render();

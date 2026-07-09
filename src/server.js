@@ -23,6 +23,7 @@ import { runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition } from './
 import { nowIso, parseDuration } from './util.js';
 
 const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
+const VENDOR_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'node_modules');
 
 function boardPayload(root) {
   const board = loadBoard(root);
@@ -275,6 +276,11 @@ export function startServer(root, port = 4400) {
       if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         res.end(fs.readFileSync(path.join(WEB_DIR, 'index.html')));
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/vendor/markdown-it.min.js') {
+        res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
+        res.end(fs.readFileSync(path.join(VENDOR_DIR, 'markdown-it', 'dist', 'markdown-it.min.js')));
         return;
       }
       if (req.method === 'GET' && url.pathname === '/api/board') {

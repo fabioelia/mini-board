@@ -25,6 +25,10 @@ import { nowIso, shellQuote, claudeFlags } from './util.js';
 
 const JIRA_TIMEOUT_MS = 15 * 60_000;
 
+// MB_NO_SPAWN=1 skips launching claude while keeping logs/state identical —
+// the test suite sets it so runs never touch the real Jira.
+const noSpawn = () => process.env.MB_NO_SPAWN === '1';
+
 export function jiraConfig(board) {
   const j = board.jira ?? {};
   return {
@@ -37,6 +41,8 @@ export function jiraConfig(board) {
     allow_remote_actions: !!j.allow_remote_actions, // config issue may set on_enter/on_leave (runs shell commands — opt in!)
     comments: !!j.comments, // agent run summaries land as issue comments
     labels: !!j.labels, // paused cards get the mb-paused label
+    reconcile: j.reconcile !== false, // cards whose issue leaves the JQL scope get archived
+    create_tickets: j.create_tickets !== false, // promoting a ticketless card out of inbox files a Jira issue
     instruction: j.instruction ?? '',
   };
 }
@@ -195,7 +201,7 @@ export function applyLaneConfig(root, board, configText, allowActions = false) {
 // Upsert issues as cards and align lanes to Jira statuses. Jira wins: a
 // mirrored card sitting in the wrong lane is moved (loop guard deliberately
 // NOT applied — the source of truth is allowed to reposition freely).
-export function applyIssues(board, state, issues) {
+export function applyIssues(board, state, issues, reconcile = true) {
   const created = [];
   const moved = [];
   let unmapped = 0;
@@ -231,7 +237,26 @@ export function applyIssues(board, state, issues) {
       moved.push({ id, to: lane, status: issue.status });
     }
   }
-  return { created, moved, unmapped };
+  // Source of truth cuts both ways: a mirrored card whose issue dropped out
+  // of the JQL scope (moved off-sprint, reassigned, done) is archived — not
+  // deleted; unarchiving brings it back. Skipped entirely when the sync
+  // reported zero issues, so a mis-scoped JQL can't silently sweep the board.
+  const archived = [];
+  if (reconcile && issues.length) {
+    const seen = new Set(issues.map((i) => normKey(i.key)));
+    for (const [id, card] of Object.entries(state.cards)) {
+      if (card.archived || card.origin?.source !== 'jira') continue;
+      if (seen.has(normKey(card.refs?.ticket ?? ''))) continue;
+      if (card.pending_session_logs?.length) {
+        logEntry(card, 'jira', 'left Jira scope but an agent run is still going — not archived');
+        continue;
+      }
+      card.archived = true;
+      logEntry(card, 'jira', 'no longer in Jira scope (off-sprint, reassigned, or done) — archived');
+      archived.push(id);
+    }
+  }
+  return { created, moved, unmapped, archived };
 }
 
 function recordJira(state, patch) {
@@ -256,8 +281,9 @@ function finishJiraSync(root, board, state, stdout, log = null) {
   const laneCfg = cfg.config_issue && config
     ? applyLaneConfig(root, board, config, cfg.allow_remote_actions)
     : { applied: [], error: null };
-  const { created, moved, unmapped } = applyIssues(board, state, issues);
+  const { created, moved, unmapped, archived } = applyIssues(board, state, issues, cfg.reconcile);
   const summary = `${issues.length} issue(s): ${created.length} new, ${moved.length} moved${unmapped ? `, ${unmapped} unmapped` : ''}`
+    + `${archived.length ? `, ${archived.length} archived (left Jira scope)` : ''}`
     + `${newLanes.length ? ` · ${newLanes.length} lane(s) created from Jira` : ''}`
     + `${laneCfg.applied.length ? ` · lane config applied to ${laneCfg.applied.length}` : ''}`
     + `${laneCfg.error ? ` · config: ${laneCfg.error}` : ''}`;
@@ -265,7 +291,7 @@ function finishJiraSync(root, board, state, stdout, log = null) {
     last_run: nowIso(), last_status: 'ok', last_summary: summary, ...base,
     ...(obj.session_id ? { last_session: obj.session_id } : {}),
   });
-  return { ok: true, created, moved, unmapped, new_lanes: newLanes, config_applied: laneCfg.applied, summary, session: obj.session_id ?? null };
+  return { ok: true, created, moved, unmapped, archived, new_lanes: newLanes, config_applied: laneCfg.applied, summary, session: obj.session_id ?? null };
 }
 
 // Generic fire-and-forget Jira write (comment / label) via the Atlassian MCP.
@@ -276,8 +302,10 @@ function spawnJiraWrite(root, board, tag, prompt) {
   const logFile = path.join(dir, `jira-push-${tag}-${Date.now()}.log`);
   fs.writeFileSync(logFile, `# ${nowIso()} ${tag}\n`);
   const fd = fs.openSync(logFile, 'a');
-  const child = spawn('/bin/sh', ['-c', cmd], { detached: true, stdio: ['ignore', fd, fd], cwd: root });
-  child.unref();
+  if (!noSpawn()) {
+    const child = spawn('/bin/sh', ['-c', cmd], { detached: true, stdio: ['ignore', fd, fd], cwd: root });
+    child.unref();
+  }
   fs.closeSync(fd);
   return path.relative(root, logFile);
 }
@@ -316,8 +344,10 @@ export function runJiraSync(root, board, state, opts = {}) {
   const logFile = path.join(dir, `jira-${Date.now()}.log`);
   fs.writeFileSync(logFile, `# ${nowIso()} jira sync\n`);
   const fd = fs.openSync(logFile, 'a');
-  const child = spawn('/bin/sh', ['-c', cmd], { detached: true, stdio: ['ignore', fd, fd], cwd: root });
-  child.unref();
+  if (!noSpawn()) {
+    const child = spawn('/bin/sh', ['-c', cmd], { detached: true, stdio: ['ignore', fd, fd], cwd: root });
+    child.unref();
+  }
   fs.closeSync(fd);
   state.pending_jira = { log: path.relative(root, logFile), started: nowIso() };
   recordJira(state, { last_status: 'running' });
@@ -342,6 +372,75 @@ export function harvestJiraSync(root, board, state, now = Date.now()) {
   return null;
 }
 
+// Inbox → Jira: promoting a ticketless card into a status-mapped lane FILES a
+// Jira issue — the board's "once it leaves inbox, it's a ticket" contract.
+// Fire-and-forget spawn; the created key is harvested from the log afterwards
+// (harvestJiraCreates) and attached to the card, at which point push_moves,
+// comments, and labels all apply to it like any mirrored card.
+export function pushJiraCreate(root, board, state, id, targetLane) {
+  const cfg = jiraConfig(board);
+  const card = state.cards[id];
+  const status = statusForLane(board, targetLane);
+  if (!cfg.enabled || !cfg.create_tickets || !cfg.project || !card || card.refs?.ticket || !status) return null;
+  if (state.pending_jira_creates?.some((p) => p.id === id)) return null; // create already in flight
+  const context = [
+    `Summary: ${card.title}`,
+    card.note ? `Details: ${card.note}` : null,
+    card.refs?.pr ? `Related PR: ${card.refs.pr}` : null,
+    card.refs?.slack ? `Slack thread: ${card.refs.slack}` : null,
+    `(Filed automatically by mini-board when the card was promoted to "${status}".)`,
+  ].filter(Boolean).join('\n');
+  const prompt = [
+    `Using the Atlassian tools, create a Jira issue in project ${cfg.project}:`,
+    context,
+    `Then: assign it to me, add it to the active sprint if there is one, and transition it to status "${status}" (skip any of these that fail — the issue itself matters most).`,
+    'Reply with ONLY the new issue key (e.g. NP-1234) — nothing else.',
+  ].join('\n\n');
+  const log = spawnJiraWrite(root, board, `create-${id}`, prompt);
+  state.pending_jira_creates ??= [];
+  state.pending_jira_creates.push({ id, log, started: nowIso(), status });
+  logEntry(card, 'jira', `promoted out of inbox — filing a ${cfg.project} ticket at "${status}" (log: ${log})`);
+  return { log, status };
+}
+
+// Harvest filed tickets: pull the issue key out of each finished create run
+// and attach it to the card. From then on the card is a mirrored Jira card.
+export function harvestJiraCreates(root, state, now = Date.now()) {
+  const pending = state.pending_jira_creates;
+  if (!pending?.length) return null;
+  const remaining = [];
+  const attached = [];
+  for (const p of pending) {
+    let text = null;
+    try { text = fs.readFileSync(path.join(root, p.log), 'utf8'); } catch { /* gone */ }
+    const card = state.cards[p.id];
+    if (text === null || !card) continue; // log vanished or card deleted — drop
+    const obj = extractResultJson(text);
+    if (obj) {
+      const key = /\b([A-Z][A-Z0-9]+-\d+)\b/.exec(String(obj.result ?? ''))?.[1];
+      if (key) {
+        card.refs ??= {};
+        card.refs.ticket = key;
+        card.origin ??= { source: 'board', key };
+        card.jira_status = p.status;
+        logEntry(card, 'jira', `filed as ${key} (${p.status})`);
+        attached.push({ id: p.id, key });
+      } else {
+        logEntry(card, 'jira', `ticket creation finished but no issue key in the reply — check ${p.log}`);
+      }
+      continue;
+    }
+    if (now - Date.parse(p.started) > JIRA_TIMEOUT_MS) {
+      logEntry(card, 'jira', `ticket creation timed out — check ${p.log}`);
+      continue;
+    }
+    remaining.push(p);
+  }
+  if (remaining.length) state.pending_jira_creates = remaining;
+  else delete state.pending_jira_creates;
+  return attached.length ? attached : null;
+}
+
 // Board → Jira: a card dragged to a status-mapped lane transitions the issue.
 // Fire-and-forget background run; the outcome is visible in its log and on
 // the next sync (Jira reports the new status back).
@@ -358,8 +457,10 @@ export function pushJiraTransition(root, board, state, id, targetLane) {
   const logFile = path.join(dir, `jira-push-${id}-${Date.now()}.log`);
   fs.writeFileSync(logFile, `# ${nowIso()} jira push ${card.refs.ticket} → ${status}\n`);
   const fd = fs.openSync(logFile, 'a');
-  const child = spawn('/bin/sh', ['-c', cmd], { detached: true, stdio: ['ignore', fd, fd], cwd: root });
-  child.unref();
+  if (!noSpawn()) {
+    const child = spawn('/bin/sh', ['-c', cmd], { detached: true, stdio: ['ignore', fd, fd], cwd: root });
+    child.unref();
+  }
   fs.closeSync(fd);
   card.jira_status = status; // optimistic; next sync corrects if the transition failed
   logEntry(card, 'jira', `pushing ${card.refs.ticket} → "${status}" in Jira (log: ${path.relative(root, logFile)})`);

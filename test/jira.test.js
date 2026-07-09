@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+process.env.MB_NO_SPAWN = '1'; // never launch real claude runs (they'd hit real Jira)
+
 import {
   jiraConfig, laneForStatus, statusForLane, parseIssues, applyIssues,
   runJiraSync, harvestJiraSync, pushJiraTransition,
   reconcileLanes, applyLaneConfig, pushJiraComment, pushJiraLabel,
+  pushJiraCreate, harvestJiraCreates,
 } from '../src/jira.js';
 
 const board = {
@@ -68,6 +71,74 @@ test('parseIssues: raw JSON wins even when a string value embeds a fenced block'
   assert.equal(res.issues.length, 1);
   assert.match(res.config, /```yaml/);
   assert.deepEqual(res.statuses, ['To Do', 'In Progress']);
+});
+
+test('applyIssues: reconcile archives jira cards that left scope, spares local cards', () => {
+  const state = makeState();
+  state.cards['mb-5'] = {
+    title: 'Off-sprint now', type: 'ticket', column: 'agent',
+    refs: { ticket: 'NP-77' }, origin: { source: 'jira', key: 'NP-77' },
+    sessions: [], flags: [], log: [], created: 'x', updated: 'x',
+  };
+  state.cards['mb-6'] = {
+    title: 'Local slack ask', type: 'slack', column: 'inbox',
+    refs: {}, sessions: [], flags: [], log: [], created: 'x', updated: 'x',
+  };
+  state.cards['mb-7'] = {
+    title: 'Left scope but agent busy', type: 'ticket', column: 'agent',
+    refs: { ticket: 'NP-88' }, origin: { source: 'jira', key: 'NP-88' },
+    pending_session_logs: ['.mini-board/logs/x.log'],
+    sessions: [], flags: [], log: [], created: 'x', updated: 'x',
+  };
+  const { archived } = applyIssues(board, state, [
+    { key: 'NP-42', summary: 'Still here', status: 'In Review', url: null, priority: null },
+  ]);
+  assert.deepEqual(archived, ['mb-5']);
+  assert.equal(state.cards['mb-5'].archived, true);
+  assert.ok(!state.cards['mb-6'].archived); // local card untouched
+  assert.ok(!state.cards['mb-7'].archived); // active run — spared, logged
+  assert.ok(!state.cards['mb-1'].archived); // NP-42 still in scope
+});
+
+test('applyIssues: reconcile is skipped on empty results and when disabled', () => {
+  const state = makeState();
+  state.cards['mb-1'].origin = { source: 'jira', key: 'NP-42' };
+  applyIssues(board, state, []); // zero issues: never sweep the board
+  assert.ok(!state.cards['mb-1'].archived);
+  applyIssues(board, state, [{ key: 'NP-1', summary: 'x', status: 'Done', url: null, priority: null }], false);
+  assert.ok(!state.cards['mb-1'].archived); // reconcile off
+});
+
+test('pushJiraCreate + harvestJiraCreates: promoting a ticketless card files an issue', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mb-jira-'));
+  const state = makeState();
+  state.cards['mb-9'] = {
+    title: 'Slack bug promoted', type: 'slack', column: 'inbox',
+    refs: { slack: 'https://x.slack.com/archives/C1/p1' },
+    sessions: [], flags: [], log: [], created: 'x', updated: 'x',
+  };
+  // card with a ticket → no create
+  assert.equal(pushJiraCreate(root, board, state, 'mb-1', 'agent'), null);
+  // unmapped lane → no create
+  assert.equal(pushJiraCreate(root, board, state, 'mb-9', 'inbox'), null);
+  const res = pushJiraCreate(root, board, state, 'mb-9', 'agent');
+  assert.equal(res.status, 'In Progress');
+  assert.equal(state.pending_jira_creates.length, 1);
+  // duplicate promote while in flight → no second create
+  assert.equal(pushJiraCreate(root, board, state, 'mb-9', 'agent'), null);
+  // nothing harvested until the run finishes
+  assert.equal(harvestJiraCreates(root, state), null);
+  assert.equal(state.pending_jira_creates.length, 1);
+  // simulate the finished create run
+  fs.appendFileSync(
+    path.join(root, state.pending_jira_creates[0].log),
+    JSON.stringify({ type: 'result', subtype: 'success', result: 'NP-500' }) + '\n',
+  );
+  const attached = harvestJiraCreates(root, state);
+  assert.deepEqual(attached, [{ id: 'mb-9', key: 'NP-500' }]);
+  assert.equal(state.cards['mb-9'].refs.ticket, 'NP-500');
+  assert.equal(state.cards['mb-9'].jira_status, 'In Progress');
+  assert.equal(state.pending_jira_creates, undefined);
 });
 
 test('parseIssues: still unwraps a response fenced in markdown', () => {

@@ -394,6 +394,8 @@
             <label class="cb"><input type="checkbox" id="j-lanes"> lanes from Jira statuses</label>
             <label class="cb"><input type="checkbox" id="j-comments"> agent summaries → issue comments</label>
             <label class="cb"><input type="checkbox" id="j-labels"> paused → mb-paused label</label>
+            <label class="cb" title="Cards whose issue drops out of the JQL scope (off-sprint, reassigned, done) get archived on sync. Jira is the source of truth."><input type="checkbox" id="j-reconcile"> archive cards that leave Jira scope</label>
+            <label class="cb" title="Dragging a ticketless card into a status-mapped lane files a Jira issue (active sprint, assigned to you) and attaches the key."><input type="checkbox" id="j-createtickets"> promote out of inbox → file a ticket</label>
             <label class="cb" title="The config issue may set on_enter/on_leave — shell commands that run on THIS machine. Anyone who can edit that issue can run code here. Leave off unless you trust every editor."><input type="checkbox" id="j-remoteactions"> ⚠ allow on_enter/on_leave from config issue</label>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1095,6 +1097,8 @@ function renderJiraPanel() {
   $('#j-comments').checked = !!cfg.comments;
   $('#j-labels').checked = !!cfg.labels;
   $('#j-remoteactions').checked = !!cfg.allow_remote_actions;
+  $('#j-reconcile').checked = cfg.reconcile !== false;
+  $('#j-createtickets').checked = cfg.create_tickets !== false;
 }
 
 $('#j-save').addEventListener('click', async () => {
@@ -1109,6 +1113,8 @@ $('#j-save').addEventListener('click', async () => {
       comments: $('#j-comments').checked,
       labels: $('#j-labels').checked,
       allow_remote_actions: $('#j-remoteactions').checked,
+      reconcile: $('#j-reconcile').checked,
+      create_tickets: $('#j-createtickets').checked,
     });
     jiraDirty = false;
     render();

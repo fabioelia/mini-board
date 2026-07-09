@@ -19,7 +19,7 @@ import { boardSources, runPull, harvestPulls, parsePullActivity } from './source
 import { runTriage, harvestTriage, triageConfig } from './triage.js';
 import { runEnrich, harvestEnrich, surfaceConfig } from './surface.js';
 import { applyFlow } from './flow.js';
-import { runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition } from './jira.js';
+import { runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate, harvestJiraCreates } from './jira.js';
 import { nowIso, parseDuration } from './util.js';
 
 const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
@@ -33,7 +33,8 @@ function boardPayload(root) {
   const triage = harvestTriage(root, board, state);
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
-  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira) saveState(root, state);
+  const filed = harvestJiraCreates(root, state);
+  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed) saveState(root, state);
   const cards = Object.entries(state.cards)
     .filter(([, c]) => !c.archived)
     .map(([id, card]) => ({ id, ...card, attention: computeAttention(board, card) }));
@@ -373,8 +374,14 @@ export function startServer(root, port = 4400) {
             actionResults.push({ cmd: r.cmd, ok: r.ok, background: !!r.background, error: r.error });
           }
         }
-        // board → Jira: dragging into a status-mapped lane transitions the issue
-        const jiraPush = moved ? pushJiraTransition(root, board, state, hit.id, column) : null;
+        // board → Jira: dragging into a status-mapped lane transitions the
+        // issue — or FILES one if the card doesn't have a ticket yet (inbox
+        // promotion: once it leaves inbox, it's a Jira ticket).
+        const jiraPush = moved
+          ? (state.cards[hit.id]?.refs?.ticket
+            ? pushJiraTransition(root, board, state, hit.id, column)
+            : pushJiraCreate(root, board, state, hit.id, column))
+          : null;
         saveState(root, state);
         json(res, 200, { ok: true, moved, actions: actionResults, jira_push: jiraPush?.pushed ?? null, ...boardPayload(root) });
         return;
@@ -423,6 +430,8 @@ export function startServer(root, port = 4400) {
             ...(body.comments ? { comments: true } : {}),
             ...(body.labels ? { labels: true } : {}),
             ...(body.allow_remote_actions ? { allow_remote_actions: true } : {}),
+            ...(body.reconcile === false ? { reconcile: false } : {}),
+            ...(body.create_tickets === false ? { create_tickets: false } : {}),
             ...(String(body.instruction ?? '').trim() ? { instruction: String(body.instruction).trim() } : {}),
           }));
         }
@@ -782,7 +791,7 @@ function startPrWatcher(root) {
       // requests in the meantime (jira sync, pulls, triage) must survive
       // this save — re-read them so a stale snapshot doesn't orphan a run.
       const fresh = loadState(root);
-      for (const key of ['pending_jira', 'pending_pulls', 'pending_triage']) {
+      for (const key of ['pending_jira', 'pending_pulls', 'pending_triage', 'pending_jira_creates']) {
         if (fresh[key] !== undefined) state[key] = fresh[key];
         else delete state[key];
       }

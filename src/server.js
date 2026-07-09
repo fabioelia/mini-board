@@ -19,7 +19,10 @@ import { boardSources, runPull, harvestPulls, parsePullActivity } from './source
 import { runTriage, harvestTriage, triageConfig } from './triage.js';
 import { runEnrich, harvestEnrich, surfaceConfig } from './surface.js';
 import { applyFlow } from './flow.js';
-import { runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate, harvestJiraCreates } from './jira.js';
+import {
+  runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate,
+  harvestJiraCreates, pushJiraConfig,
+} from './jira.js';
 import { nowIso, parseDuration } from './util.js';
 
 const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
@@ -270,6 +273,20 @@ function json(res, code, obj) {
 }
 
 export function startServer(root, port = 4400) {
+  // Any board.yml mutation re-parks the FULL config on the Jira config issue
+  // (debounced — a burst of edits becomes one push). The ticket is the source
+  // of truth; the local file is just the working copy.
+  let configPushTimer = null;
+  const queueConfigPush = () => {
+    const board = loadBoard(root);
+    const cfg = jiraConfig(board);
+    if (!cfg.enabled || !cfg.config_issue) return;
+    clearTimeout(configPushTimer);
+    configPushTimer = setTimeout(() => {
+      try { pushJiraConfig(root, loadBoard(root)); } catch (err) { console.error(`jira config push failed: ${err.message}`); }
+    }, 10_000);
+    configPushTimer.unref?.();
+  };
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     try {
@@ -436,6 +453,7 @@ export function startServer(root, port = 4400) {
           }));
         }
         fs.writeFileSync(file, doc.toString());
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -459,6 +477,7 @@ export function startServer(root, port = 4400) {
           }));
         }
         fs.writeFileSync(file, doc.toString());
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -471,6 +490,7 @@ export function startServer(root, port = 4400) {
           ...(String(body.instruction ?? '').trim() ? { instruction: String(body.instruction).trim() } : {}),
         }));
         fs.writeFileSync(file, doc.toString());
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -485,6 +505,7 @@ export function startServer(root, port = 4400) {
           tools: (Array.isArray(body.tools) ? body.tools : []).map(String),
           instruction: String(body.instruction ?? '').trim() || null,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -657,12 +678,14 @@ export function startServer(root, port = 4400) {
           max_visits: maxVisits,
           jira_status: String(body.jira_status ?? '').trim() || null,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, id, ...boardPayload(root) });
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/column/move') {
         const { id, dir } = await readBody(req);
         moveColumn(root, id, Number(dir) || 1);
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -684,6 +707,7 @@ export function startServer(root, port = 4400) {
           saveState(root, state);
         }
         deleteColumn(root, id);
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -704,6 +728,7 @@ export function startServer(root, port = 4400) {
           capture_session: !!body.capture_session,
           orig: body.orig ? { column: body.orig.column, trigger: body.orig.trigger, index: Number(body.orig.index) } : null,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -711,6 +736,7 @@ export function startServer(root, port = 4400) {
         const body = await readBody(req);
         if (!['on_enter', 'on_leave'].includes(body.trigger)) return json(res, 400, { error: 'trigger must be on_enter or on_leave' });
         deleteAutomation(root, { column: body.column, trigger: body.trigger, index: Number(body.index) });
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -739,6 +765,7 @@ export function startServer(root, port = 4400) {
           column,
           enabled: body.enabled !== false,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, id, ...boardPayload(root) });
         return;
       }

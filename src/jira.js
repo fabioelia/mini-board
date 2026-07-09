@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import YAML from 'yaml';
-import { BOARD_FILE, ensureLogDir, logEntry, moveCard, getColumn, createCard } from './store.js';
+import { BOARD_FILE, ensureLogDir, loadBoard, logEntry, moveCard, getColumn, createCard } from './store.js';
 import { extractResultJson, normKey } from './sources.js';
 import { nowIso, shellQuote, claudeFlags } from './util.js';
 
@@ -153,6 +153,75 @@ export function reconcileLanes(root, board, statuses) {
   return created;
 }
 
+// The config issue's description carries a fenced YAML block. Two shapes:
+//   - FULL board config (has "columns:"): the entire board.yml minus the
+//     local jira: pointer — lanes, automations, sources, flow, everything.
+//     This is what pushJiraConfig writes; applying it restores the whole
+//     board experience on any machine pointing at the same issue.
+//   - legacy "lanes:" map keyed by status name (applyLaneConfig below).
+export function parseConfigYaml(configText) {
+  let text = String(configText ?? '');
+  const fence = /```(?:yaml|yml)?\s*([\s\S]*?)```/.exec(text);
+  if (fence) text = fence[1];
+  try { return YAML.parse(text); } catch { return null; }
+}
+
+// board.yml minus the jira: block — the jira pointer (project/config_issue)
+// is the per-machine bootstrap and must not round-trip through the ticket.
+export function serializeBoardConfig(root) {
+  const doc = YAML.parseDocument(fs.readFileSync(path.join(root, BOARD_FILE), 'utf8'));
+  if (doc.has('jira')) doc.delete('jira');
+  return doc.toString();
+}
+
+// Board → ticket: park the FULL board config on the config issue. Called
+// (debounced) whenever board.yml changes, so the ticket always mirrors the
+// board and `mb adopt` elsewhere restores the same experience.
+export function pushJiraConfig(root, board) {
+  const cfg = jiraConfig(board);
+  if (!cfg.enabled || !cfg.config_issue) return null;
+  const body = [
+    'This issue\'s description is the **source of truth for the mini-board configuration** — lanes, automations, sources, flow. mini-board rewrites it whenever the board changes and restores from it on sync (`jira.config_issue` in board.yml).',
+    '',
+    '⚠️ The YAML below contains **shell commands** (`on_enter`/`on_leave`/`actions`) that run on the machine hosting the board when `allow_remote_actions` is enabled there. Treat edit rights on this issue accordingly.',
+    '',
+    '```yaml',
+    serializeBoardConfig(root).trimEnd(),
+    '```',
+    '',
+    'Managed by mini-board — edits here apply to the board on its next Jira sync. Keep this issue open.',
+  ].join('\n');
+  const prompt = `Using the Atlassian tools, replace the ENTIRE description of Jira issue ${cfg.config_issue} with EXACTLY the following content, verbatim (preserve the fenced code block as-is):\n\n${body}\n\nReply with one line confirming.`;
+  const log = spawnJiraWrite(root, board, 'config', prompt);
+  return { log };
+}
+
+// Ticket → board: full restore. Rewrites board.yml from the parked config,
+// keeping only the local jira: pointer. Without allow_remote_actions, the
+// executable surface (lane automations, named actions, source prompts) is
+// stripped — a hostile ticket edit must not become shell on this machine.
+export function applyFullBoardConfig(root, board, parsed, allowActions = false) {
+  if (!parsed || !Array.isArray(parsed.columns) || !parsed.columns.length) {
+    return { applied: [], error: 'full config has no columns', stripped: false };
+  }
+  const clean = JSON.parse(JSON.stringify(parsed));
+  let stripped = false;
+  if (!allowActions) {
+    for (const c of clean.columns) {
+      if (c && (c.on_enter || c.on_leave)) { delete c.on_enter; delete c.on_leave; stripped = true; }
+    }
+    if (clean.actions) { delete clean.actions; stripped = true; }
+    if (clean.sources) { delete clean.sources; stripped = true; }
+  }
+  const file = path.join(root, BOARD_FILE);
+  const prev = YAML.parseDocument(fs.readFileSync(file, 'utf8'));
+  const next = YAML.parseDocument(YAML.stringify(clean));
+  if (prev.has('jira')) next.set('jira', JSON.parse(JSON.stringify(prev.get('jira')?.toJSON?.() ?? prev.get('jira'))));
+  fs.writeFileSync(file, next.toString());
+  Object.assign(board, loadBoard(root)); // callers keep using the restored board
+  return { applied: clean.columns.map((c) => c?.id).filter(Boolean), error: null, stripped };
+}
+
 // Lane config parked in Jira: the config issue's description carries a YAML
 // block keyed by status name; sync applies it onto the mapped lanes.
 //   lanes:
@@ -276,16 +345,26 @@ function finishJiraSync(root, board, state, stdout, log = null) {
     return { ok: false, error: 'response was not the issues JSON shape', tail: String(obj.result).slice(0, 300) };
   }
   const cfg = jiraConfig(board);
-  // Jira-held state first: lanes from workflow statuses, then lane config
-  const newLanes = cfg.lanes_from_jira && statuses.length ? reconcileLanes(root, board, statuses) : [];
-  const laneCfg = cfg.config_issue && config
-    ? applyLaneConfig(root, board, config, cfg.allow_remote_actions)
-    : { applied: [], error: null };
+  // Jira-held state first. A FULL board config (has columns:) replaces
+  // board.yml wholesale, so it applies before reconcileLanes tops up lanes
+  // for any statuses the parked config hasn't seen yet. The legacy lanes:
+  // map only decorates existing lanes, so it applies after reconcile.
+  let laneCfg = { applied: [], error: null };
+  let newLanes = [];
+  const parsedCfg = cfg.config_issue && config ? parseConfigYaml(config) : null;
+  if (parsedCfg && Array.isArray(parsedCfg.columns)) {
+    laneCfg = applyFullBoardConfig(root, board, parsedCfg, cfg.allow_remote_actions);
+    if (cfg.lanes_from_jira && statuses.length) newLanes = reconcileLanes(root, board, statuses);
+  } else {
+    if (cfg.lanes_from_jira && statuses.length) newLanes = reconcileLanes(root, board, statuses);
+    if (cfg.config_issue && config) laneCfg = applyLaneConfig(root, board, config, cfg.allow_remote_actions);
+  }
   const { created, moved, unmapped, archived } = applyIssues(board, state, issues, cfg.reconcile);
   const summary = `${issues.length} issue(s): ${created.length} new, ${moved.length} moved${unmapped ? `, ${unmapped} unmapped` : ''}`
     + `${archived.length ? `, ${archived.length} archived (left Jira scope)` : ''}`
     + `${newLanes.length ? ` · ${newLanes.length} lane(s) created from Jira` : ''}`
-    + `${laneCfg.applied.length ? ` · lane config applied to ${laneCfg.applied.length}` : ''}`
+    + `${laneCfg.applied.length ? ` · ${parsedCfg && Array.isArray(parsedCfg.columns) ? 'full board config restored' : 'lane config applied'} (${laneCfg.applied.length} lane(s))` : ''}`
+    + `${laneCfg.stripped ? ' — commands stripped (allow_remote_actions off)' : ''}`
     + `${laneCfg.error ? ` · config: ${laneCfg.error}` : ''}`;
   recordJira(state, {
     last_run: nowIso(), last_status: 'ok', last_summary: summary, ...base,

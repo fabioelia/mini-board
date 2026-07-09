@@ -28,6 +28,18 @@ export function shellQuote(value) {
   return `'${String(value).replaceAll("'", `'\\''`)}'`;
 }
 
+// Board-level Claude defaults (board.yml `claude:` block) rendered as CLI
+// flags for headless runs. Flags already present in the command win — a
+// per-source/per-automation --model overrides the board default.
+export function claudeFlags(board, cmd = '') {
+  const c = board?.claude ?? {};
+  let out = '';
+  if (c.model && !/--model\b/.test(cmd)) out += ` --model ${shellQuote(c.model)}`;
+  if (c.effort && !/--effort\b/.test(cmd)) out += ` --effort ${shellQuote(c.effort)}`;
+  if (c.args && !cmd.includes(c.args)) out += ` ${c.args}`;
+  return out;
+}
+
 // Look up "a.b.c" in a nested object.
 export function lookupPath(ctx, path) {
   let cur = ctx;

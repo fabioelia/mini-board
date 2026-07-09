@@ -88,20 +88,47 @@ test('runAction dry-run only renders the command', () => {
   assert.equal(state.cards['mb-1'].log.length, 0);
 });
 
-test('background action + harvestSessions picks up the session id', async () => {
+test('background action + harvestSessions: sid attaches early, reply lands on finish', async () => {
   const root = makeRoot();
   const state = makeState();
-  const action = { run: 'echo \'{"session_id":"sess-bg"}\'', background: true, capture_session: true };
+  // stream-json style: init event (with session id) arrives first
+  const action = { run: 'echo \'{"type":"system","subtype":"init","session_id":"sess-bg"}\'', background: true, capture_session: true };
   const res = runAction(root, board, state, 'mb-1', action, {});
   assert.equal(res.background, true);
   assert.ok(state.cards['mb-1'].pending_session_logs.length === 1);
 
   // give the detached child a beat to write its output
   await new Promise((r) => setTimeout(r, 300));
-  const found = harvestSessions(root, state);
-  assert.equal(found, 1);
+  const h1 = harvestSessions(root, state);
+  assert.equal(h1.found, 1);
+  assert.deepEqual(h1.completed, []); // sid alone isn't completion
   assert.equal(state.cards['mb-1'].sessions.at(-1).id, 'sess-bg');
+  // run not finished yet — still tracked so the UI shows "agent working"
+  assert.equal(state.cards['mb-1'].pending_session_logs.length, 1);
+
+  // the final result event lands → agent reply logged, tracking cleared
+  const rel = state.cards['mb-1'].pending_session_logs[0];
+  fs.appendFileSync(path.join(root, rel), '\n{"type":"result","subtype":"success","result":"All done — opened PR #7.","session_id":"sess-bg"}\n');
+  const h2 = harvestSessions(root, state);
+  assert.equal(h2.found, 1);
+  assert.deepEqual(h2.completed, ['mb-1']); // successful result → flow candidate
   assert.equal(state.cards['mb-1'].pending_session_logs, undefined);
+  const lastSession = state.cards['mb-1'].log.filter((e) => e.kind === 'session').at(-1);
+  assert.match(lastSession.text, /All done — opened PR #7/);
+});
+
+test('harvestSessions: quiet run times out with a visible failure entry', () => {
+  const root = makeRoot();
+  const state = makeState();
+  fs.mkdirSync(path.join(root, '.mini-board/logs'), { recursive: true });
+  const rel = `.mini-board/logs/mb-1-${Date.now() - 16 * 60_000}-agent.log`;
+  fs.writeFileSync(path.join(root, rel), '# started, then nothing\n');
+  state.cards['mb-1'].pending_session_logs = [rel];
+  const h = harvestSessions(root, state);
+  assert.equal(h.found, 1);
+  assert.deepEqual(h.completed, []); // timeout is not success
+  assert.equal(state.cards['mb-1'].pending_session_logs, undefined);
+  assert.match(state.cards['mb-1'].log.at(-1).text, /no result after 15m/);
 });
 
 test('attachSession dedupes', () => {

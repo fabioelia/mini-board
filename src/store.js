@@ -129,6 +129,9 @@ export function moveCard(board, state, id, toColumn) {
   const from = card.column;
   if (from === toColumn) return { from, to: toColumn, moved: false };
   card.column = toColumn;
+  // visit counter feeds the flow loop guard (max_visits)
+  card.lane_visits ??= {};
+  card.lane_visits[toColumn] = (card.lane_visits[toColumn] ?? 0) + 1;
   logEntry(card, 'move', `${from} → ${toColumn}`, { from, to: toColumn });
   return { from, to: toColumn, moved: true };
 }

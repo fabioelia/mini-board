@@ -7,32 +7,39 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { ensureLogDir, latestSession, logEntry } from './store.js';
-import { fillTemplate, nowIso } from './util.js';
+import { extractResultJson } from './sources.js';
+import { fillTemplate, nowIso, claudeFlags } from './util.js';
 
 // Used when board.yml doesn't define its own `actions:`. Placeholders are
 // shell-escaped on substitution, so they must not be quoted in the template.
 export const DEFAULT_ACTIONS = {
+  // stream-json so the log fills as the run progresses: the session id lands
+  // within seconds (init event) and the final result is harvested onto the
+  // card when it arrives.
   // `mb comment <card> --fire` — push a comment into the card's latest session.
   fire_comment: {
-    run: 'claude --resume {{card.session}} -p {{message}} --output-format json',
+    run: 'claude --resume {{card.session}} -p {{message}} --output-format stream-json --verbose --permission-mode bypassPermissions',
     background: true,
     capture_session: true,
   },
   // `mb agent <card>` — launch a fresh agent with the full card context.
   new_agent: {
-    run: 'claude -p {{prompt}} --output-format json',
+    run: 'claude -p {{prompt}} --output-format stream-json --verbose --permission-mode bypassPermissions',
     background: true,
     capture_session: true,
   },
 };
 
 export function normalizeAction(def, name = null) {
-  if (typeof def === 'string') return { name, run: def, background: false, capture_session: false };
+  if (typeof def === 'string') return { name, run: def, background: false, capture_session: false, instruction: null };
   return {
     name: def.name ?? name,
     run: def.run,
     background: def.background ?? false,
     capture_session: def.capture_session ?? false,
+    // what {{prompt}} tells the agent to DO with the card (falls back to
+    // "continue it to completion" in cardContext)
+    instruction: def.instruction ?? null,
   };
 }
 
@@ -114,8 +121,12 @@ function actionEnv(ctx) {
 export function runAction(root, board, state, id, actionDef, extra = {}, opts = {}) {
   const card = state.cards[id];
   const action = normalizeAction(actionDef);
-  const ctx = buildContext(board, id, card, extra);
-  const { text: cmd, missing } = fillTemplate(action.run, ctx);
+  // per-action instruction feeds {{prompt}}/{{card.context}}; an explicit one
+  // from the caller (mb agent "do X") still wins
+  const ctx = buildContext(board, id, card, { ...extra, instruction: extra.instruction ?? action.instruction });
+  let { text: cmd, missing } = fillTemplate(action.run, ctx);
+  // board-level model/effort defaults apply to claude commands that don't set their own
+  if (/^claude\s/.test(cmd)) cmd += claudeFlags(board, cmd);
 
   if (missing.includes('card.session')) {
     return {
@@ -180,32 +191,53 @@ export function attachSession(card, sessionId, label) {
   return true;
 }
 
-// Scan pending background logs for captured session ids. Called from
-// board/sync so sessions show up without babysitting.
-export function harvestSessions(root, state) {
+const RUN_TIMEOUT_MS = 15 * 60_000;
+
+// Scan pending background logs. Attach session ids as soon as they appear,
+// and when a run's final result lands, log the agent's answer on the card —
+// that's what the drawer shows as the session's reply — then stop tracking.
+// Runs quiet past the timeout get a visible failure entry instead of
+// vanishing. Called from board/sync so this happens without babysitting.
+export function harvestSessions(root, state, now = Date.now()) {
   let found = 0;
-  for (const [, card] of Object.entries(state.cards)) {
+  const completed = []; // cards whose run finished SUCCESSFULLY (feeds flow on_done)
+  for (const [id, card] of Object.entries(state.cards)) {
     if (!card.pending_session_logs?.length) continue;
     const remaining = [];
     for (const rel of card.pending_session_logs) {
       const file = path.join(root, rel);
-      let sid = null;
+      let text = null;
       try {
-        sid = extractSessionId(fs.readFileSync(file, 'utf8'));
+        text = fs.readFileSync(file, 'utf8');
       } catch {
         // log file vanished — drop the pending entry
         continue;
       }
-      if (sid) {
-        if (attachSession(card, sid, `captured from ${path.basename(rel)}`)) found++;
-      } else {
-        remaining.push(rel);
+      const sid = extractSessionId(text);
+      if (sid && attachSession(card, sid, `captured from ${path.basename(rel)}`)) found++;
+      const result = extractResultJson(text);
+      if (result) {
+        const success = !result.is_error && (!result.subtype || result.subtype === 'success');
+        const reply = typeof result.result === 'string' && result.result.trim()
+          ? result.result.trim().slice(0, 2000)
+          : `(run ended: ${result.subtype ?? 'no result text'})`;
+        logEntry(card, 'session', reply);
+        if (success) completed.push(id);
+        found++;
+        continue; // finished — stop tracking
       }
+      const ts = Number(/-(\d{13})-/.exec(rel)?.[1]);
+      if (ts && now - ts > RUN_TIMEOUT_MS) {
+        logEntry(card, 'action', `background run went quiet — no result after 15m (log: ${rel})`);
+        found++;
+        continue; // give up so "Agent working" doesn't pulse forever
+      }
+      remaining.push(rel);
     }
     card.pending_session_logs = remaining;
     if (!remaining.length) delete card.pending_session_logs;
   }
-  return found;
+  return { found, completed };
 }
 
 // All on_enter/on_leave actions for a move.

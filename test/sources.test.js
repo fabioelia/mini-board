@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   toolAllowList, boardSources, buildPullPrompt, buildPullCommand,
-  extractResultJson, parseCards, ingestCards, runPull, harvestPulls,
+  extractResultJson, parseCards, ingestCards, runPull, harvestPulls, parsePullActivity,
 } from '../src/sources.js';
 
 const board = {
@@ -63,7 +63,7 @@ test('buildPullPrompt includes task, contract, and existing cards', () => {
 
 test('buildPullCommand quotes prompt and sets allowed tools', () => {
   const cmd = buildPullCommand(boardSources(board)[0], 'the prompt');
-  assert.match(cmd, /^claude -p 'the prompt' --output-format json/);
+  assert.match(cmd, /^claude -p 'the prompt' --output-format stream-json --verbose/);
   assert.match(cmd, /--allowedTools 'mcp__slack'/);
 });
 
@@ -117,6 +117,48 @@ test('ingestCards dedupes by origin key and by ref', () => {
   state.cards[first.created[0]].archived = true;
   const archivedDup = ingestCards(board, state, source, [items[0]]);
   assert.equal(archivedDup.skipped, 1);
+});
+
+test('ingestCards: cosmetic key/ref drift does not duplicate', () => {
+  const state = emptyState();
+  const source = boardSources(board)[0];
+  ingestCards(board, state, source, [
+    { title: 'PR follow-up', pr: 'https://g/pull/9', dedupe_key: 'https://g/pull/9' },
+    { title: 'Loose task', dedupe_key: 'Weird  Task' },
+  ]);
+  // trailing slash, case, and whitespace differences all still dedupe
+  const drifted = ingestCards(board, state, source, [
+    { title: 'PR follow-up', pr: 'https://G/pull/9/', dedupe_key: 'https://G/pull/9/' },
+    { title: 'Loose task again', dedupe_key: 'weird task' },
+  ]);
+  assert.deepEqual(drifted, { created: [], skipped: 2 });
+});
+
+test('ingestCards: archived card with matching ref is not resurrected', () => {
+  const state = emptyState();
+  const source = boardSources(board)[0];
+  const first = ingestCards(board, state, source, [{ title: 'x', pr: 'https://g/pull/9', dedupe_key: 'p9' }]);
+  state.cards[first.created[0]].archived = true;
+  const res = ingestCards(board, state, source, [{ title: 'x', pr: 'https://g/pull/9', dedupe_key: 'brand-new-key' }]);
+  assert.deepEqual(res, { created: [], skipped: 1 });
+});
+
+test('ingestCards: duplicate keys within one batch collapse to one card', () => {
+  const state = emptyState();
+  const source = boardSources(board)[0];
+  const res = ingestCards(board, state, source, [
+    { title: 'A', dedupe_key: 'k1' },
+    { title: 'A restated', dedupe_key: 'K1 ' },
+  ]);
+  assert.equal(res.created.length, 1);
+  assert.equal(res.skipped, 1);
+});
+
+test('runPull refuses a second concurrent pull of the same source', () => {
+  const state = { ...emptyState(), pending_pulls: [{ source: 'feedback', log: 'x', started: '2026-07-08T00:00:00Z' }] };
+  const res = runPull('/tmp', board, state, 'feedback', { background: true });
+  assert.equal(res.ok, false);
+  assert.match(res.error, /already running/);
 });
 
 test('runPull sync: executes command and ingests cards', () => {
@@ -179,6 +221,42 @@ test('background pull + harvestPulls ingests when output lands', async () => {
   assert.equal(finished[0].ok, true);
   assert.equal(state.pending_pulls, undefined);
   assert.equal(Object.values(state.cards)[0].title, 'BG thing');
+
+  // run history recorded with timing + log pointer
+  const h = state.sources.feedback.history;
+  assert.equal(h.length, 1);
+  assert.equal(h[0].status, 'ok');
+  assert.equal(h[0].created, 1);
+  assert.ok(h[0].started && h[0].finished && h[0].log);
+});
+
+test('extractResultJson accepts a stream-json result event', () => {
+  const stream = [
+    '{"type":"system","subtype":"init","session_id":"s1","model":"m","tools":[]}',
+    '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"gh pr list"}}]}}',
+    '{"type":"result","subtype":"success","result":"{\\"cards\\":[]}","session_id":"s1"}',
+  ].join('\n');
+  const obj = extractResultJson(stream);
+  assert.equal(obj.session_id, 's1');
+  // error result event without a .result string still surfaces (fail fast, no timeout)
+  const err = extractResultJson('{"type":"result","subtype":"error_during_execution","session_id":"s2"}');
+  assert.equal(err.session_id, 's2');
+});
+
+test('parsePullActivity turns a stream-json log into a readable feed', () => {
+  const log = [
+    '# 2026-07-08 pull feedback',
+    '{"type":"system","subtype":"init","session_id":"s1","model":"claude-opus-4-8","tools":["Bash","WebSearch"]}',
+    '{"type":"assistant","message":{"content":[{"type":"text","text":"Scanning PRs now."}]}}',
+    '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"gh pr list --json url"}}]}}',
+    '{"type":"user","message":{"content":[{"type":"tool_result","content":"[…]","is_error":false}]}}',
+    '{"type":"result","subtype":"success","result":"{\\"cards\\":[]}","duration_ms":42000,"num_turns":3,"total_cost_usd":0.0421}',
+  ].join('\n');
+  const events = parsePullActivity(log);
+  assert.deepEqual(events.map((e) => e.kind), ['init', 'text', 'tool', 'tool_result', 'result']);
+  assert.match(events[0].text, /claude-opus-4-8 · 2 tools/);
+  assert.match(events[2].text, /Bash .*gh pr list/);
+  assert.match(events[4].text, /finished in 42s · 3 turns · \$0\.042/);
 });
 
 test('harvestPulls times out stale pulls', () => {

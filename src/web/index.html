@@ -78,6 +78,9 @@
   .lanes { display: flex; gap: 14px; height: 100%; align-items: stretch; }
   .lane { width: 274px; flex: 0 0 274px; display: flex; flex-direction: column; min-height: 0; }
   .lane-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
+  .lane-edit { border: none; background: transparent; color: #c4bfb5; font-size: 12px; cursor: pointer; padding: 0 2px; opacity: 0; transition: opacity 0.12s; }
+  .lane-head:hover .lane-edit { opacity: 1; }
+  .lane-edit:hover { color: #ea580c; }
   .lane-dot { width: 9px; height: 9px; border-radius: 3px; }
   .lane-name { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
   .lane-count { font-size: 11px; font-weight: 600; color: #a8a29a; background: #eceae4; border-radius: 20px; padding: 1px 7px; }
@@ -152,6 +155,20 @@
   .prompt-foot .last { font-size: 11.5px; color: #8a847c; }
   .prompt-foot .last b { color: #3a3630; }
   .prompt-foot .sp { flex: 1; }
+  /* source activity / run history panel */
+  .src-activity { border-top: 1px solid #eeebe4; background: #fbfaf8; padding: 12px 14px; }
+  .src-activity .act-h { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #a8a29a; margin: 10px 0 6px; }
+  .src-activity .act-h:first-child { margin-top: 0; }
+  .act-run { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #57534e; padding: 3px 0; }
+  .act-run .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .act-run .dot.ok { background: #16a34a; } .act-run .dot.error { background: #dc2626; }
+  .act-run .dim { color: #a8a29a; }
+  .act-feed { max-height: 260px; overflow-y: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.7; color: #57534e; background: #fff; border: 1px solid #eeebe4; border-radius: 8px; padding: 8px 10px; }
+  .act-ev { white-space: pre-wrap; word-break: break-word; }
+  .act-ev.init { color: #0d9488; } .act-ev.tool { color: #1d4ed8; } .act-ev.tool_result { color: #a8a29a; }
+  .act-ev.text { color: #78716c; font-style: italic; } .act-ev.result { color: #16a34a; font-weight: 600; }
+  .act-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #c2410c; }
+  .act-live .d { width: 6px; height: 6px; border-radius: 50%; background: #ea580c; animation: pulseDot 1.4s infinite; }
   .btn-sm { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   .btn-sm.ghost { color: #57534e; background: #fff; border: 1px solid #e7e3db; }
   .btn-sm.ghost:hover { background: #f4f2ee; }
@@ -286,10 +303,11 @@
       <header class="board-head">
         <div>
           <h1 id="board-title">Ticket Flow</h1>
-          <div class="sub">Sources feed the board · drag to run automations</div>
+          <div class="sub">Sources feed the board · drag to run automations · <span id="watch-hint">PR watch off</span></div>
         </div>
         <div style="flex:1"></div>
         <button class="btn btn-accent" id="btn-run-sources"><span class="dot"></span>Run sources</button>
+        <button class="btn btn-ghost" id="btn-triage" title="An agent checks live PR/ticket state and moves cards to the lane they belong in">Triage</button>
         <button class="btn btn-ghost" id="btn-add-card">+ Card</button>
         <button class="btn btn-ghost" id="btn-activity">Activity</button>
       </header>
@@ -325,6 +343,83 @@
         <div class="sub">When a card crosses a lane boundary, its actions run. Order follows the board, left to right.</div>
       </header>
       <div class="page-body" style="max-width:920px; display:flex; flex-direction:column;">
+        <div class="sec-label">Smart triage</div>
+        <div class="rule-card" id="triage-panel">
+          <div class="rule-row2" style="margin-bottom:8px">
+            <label class="cb" style="margin:0"><input type="checkbox" id="t-enabled"> <b>Enabled</b></label>
+            <span class="trig-chip">Triage button / mb triage</span>
+            <span style="flex:1"></span>
+            <span class="dim" id="t-status" style="font-size:11px;color:#a8a29a"></span>
+          </div>
+          <div style="font-size:12px;color:#78716c;line-height:1.5;margin-bottom:10px">
+            An agent checks live PR/ticket/Slack state for cards in the lanes below,
+            fills in missing refs, and moves each card where it truly belongs — reason logged on the card.
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#a8a29a;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Lanes to triage</div>
+          <div id="t-cols" style="margin-bottom:8px"></div>
+          <div style="font-size:11px;font-weight:700;color:#a8a29a;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Tools</div>
+          <div id="t-tools" style="margin-bottom:8px">
+            <label class="cb"><input type="checkbox" value="github"> github (gh)</label>
+            <label class="cb"><input type="checkbox" value="atlassian"> atlassian</label>
+            <label class="cb"><input type="checkbox" value="slack"> slack</label>
+            <label class="cb"><input type="checkbox" value="gdrive"> gdrive</label>
+            <label class="cb"><input type="checkbox" value="web"> web search</label>
+          </div>
+          <textarea id="t-inst" spellcheck="false" style="width:100%;background:#fff;color:#26231f;border:1px solid #e0dcd3;border-radius:9px;padding:8px 11px;font-family:inherit;font-size:12.5px;min-height:44px;resize:vertical;margin-bottom:8px" placeholder="Extra guidance (optional) — e.g. cards about infra belong in the infra lane"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn-sm ghost" id="t-run">Run triage now</button>
+            <button class="btn-sm accent" id="t-save">Save to board.yml</button>
+          </div>
+        </div>
+        <div class="sec-label" style="margin-top:18px">Jira mirror</div>
+        <div class="rule-card" id="jira-panel">
+          <div class="rule-row2" style="margin-bottom:8px">
+            <label class="cb" style="margin:0"><input type="checkbox" id="j-enabled"> <b>Enabled</b></label>
+            <span class="trig-chip">Jira is the source of truth</span>
+            <span style="flex:1"></span>
+            <span id="j-status" style="font-size:11px;color:#a8a29a"></span>
+          </div>
+          <div style="font-size:12px;color:#78716c;line-height:1.5;margin-bottom:10px">
+            Sync mirrors Jira issues onto the board: each lane can declare the Jira status it represents
+            (lane modal → “Jira status”); issues land in — and move to — their status’s lane.
+            With push on, dragging a card into a mapped lane transitions the issue in Jira.
+          </div>
+          <div class="row" style="display:flex;gap:9px;margin-bottom:8px">
+            <input id="j-project" placeholder="project key (e.g. NP)" style="flex:1" />
+            <input id="j-cfgissue" placeholder="config issue (e.g. NP-1000) — lane config parks in its description" style="flex:2" />
+          </div>
+          <input id="j-jql" placeholder="JQL (default: assignee = currentUser() AND statusCategory != Done)" style="margin-bottom:8px" />
+          <div style="margin-bottom:8px">
+            <label class="cb"><input type="checkbox" id="j-push"> push board moves to Jira</label>
+            <label class="cb"><input type="checkbox" id="j-lanes"> lanes from Jira statuses</label>
+            <label class="cb"><input type="checkbox" id="j-comments"> agent summaries → issue comments</label>
+            <label class="cb"><input type="checkbox" id="j-labels"> paused → mb-paused label</label>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn-sm ghost" id="j-sync">Sync now</button>
+            <button class="btn-sm accent" id="j-save">Save to board.yml</button>
+          </div>
+        </div>
+        <div class="sec-label" style="margin-top:18px">Card details (surface)</div>
+        <div class="rule-card" id="surface-panel">
+          <div style="font-size:12px;color:#78716c;line-height:1.5;margin-bottom:10px">
+            “↻ Refresh details” on a card runs an agent that fetches live PR/ticket/Slack state
+            and writes a summary, key facts, and links onto the card. Configure what it uses and emphasizes.
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#a8a29a;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Tools</div>
+          <div id="sf-tools" style="margin-bottom:8px">
+            <label class="cb"><input type="checkbox" value="github"> github (gh)</label>
+            <label class="cb"><input type="checkbox" value="atlassian"> atlassian</label>
+            <label class="cb"><input type="checkbox" value="slack"> slack</label>
+            <label class="cb"><input type="checkbox" value="gdrive"> gdrive</label>
+            <label class="cb"><input type="checkbox" value="web"> web search</label>
+          </div>
+          <textarea id="sf-inst" spellcheck="false" style="width:100%;background:#fff;color:#26231f;border:1px solid #e0dcd3;border-radius:9px;padding:8px 11px;font-family:inherit;font-size:12.5px;min-height:44px;resize:vertical;margin-bottom:8px" placeholder="Extra guidance (optional) — e.g. always include the preview-env link; keep facts to CI + review state"></textarea>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn-sm accent" id="sf-save">Save to board.yml</button>
+          </div>
+        </div>
+        <div class="sec-label" style="margin-top:18px">Lane automations</div>
         <div id="rule-cards" style="display:flex; flex-direction:column;"></div>
         <button class="add-dashed" id="btn-add-rule">+ Add automation</button>
       </div>
@@ -353,6 +448,26 @@
             <button class="btn-sm ghost" id="btn-recheck">Re-check</button>
           </div>
         </div>
+        <div class="sec-label">Claude defaults for board runs</div>
+        <div class="conn-card" id="claude-cfg" style="display:block">
+          <div style="font-size:12px;color:#78716c;line-height:1.5;margin-bottom:10px">
+            Applied to every headless run the board fires (sources, triage, card details, lane agents) —
+            unless a specific command already sets its own <span class="mono">--model</span>/<span class="mono">--effort</span>.
+          </div>
+          <div class="row" style="display:flex;gap:9px">
+            <input id="cc-model" placeholder="model (blank = CLI default; e.g. sonnet, opus, haiku)" style="flex:2;background:#fff;border:1px solid #e0dcd3;border-radius:9px;padding:8px 11px;font-size:13px" />
+            <select id="cc-effort" style="flex:1;background:#fff;border:1px solid #e0dcd3;border-radius:9px;padding:8px 11px;font-size:13px">
+              <option value="">effort: CLI default</option>
+              <option value="low">effort: low</option>
+              <option value="medium">effort: medium</option>
+              <option value="high">effort: high</option>
+            </select>
+          </div>
+          <div class="row" style="display:flex;gap:9px;margin-top:9px">
+            <input id="cc-args" placeholder="extra claude flags (optional, e.g. --fallback-model sonnet)" style="flex:1;background:#fff;border:1px solid #e0dcd3;border-radius:9px;padding:8px 11px;font-size:13px" />
+            <button class="btn-sm accent" id="cc-save" style="flex:none">Save to board.yml</button>
+          </div>
+        </div>
         <div class="sec-label">Sessions</div>
         <div class="sess-list" id="sess-list"></div>
       </div>
@@ -371,7 +486,8 @@
   <div class="dw-body">
     <div class="dw-desc" id="dw-desc"></div>
     <div id="dw-attn"></div>
-    <div class="dw-sec"><span class="k">Claude session</span><span class="id" id="dw-sess-id"></span><span class="line"></span></div>
+    <div class="dw-sec"><span class="k">Claude session</span><span class="id" id="dw-sess-id"></span><span class="line"></span><button class="btn-sm ghost" id="dw-run-btn" style="display:none">View run</button><button class="btn-sm ghost" id="dw-reset-btn" style="display:none;color:#b91c1c" title="Clear sessions + agent replies so the next run starts clean">Reset</button></div>
+    <div class="src-activity" id="dw-run" style="display:none;border:1px solid #eeebe4;border-radius:10px;margin-bottom:12px"></div>
     <div class="msgs" id="dw-msgs"></div>
   </div>
   <div class="dw-foot">
@@ -384,6 +500,7 @@
       <span class="acts">
         <button id="dw-comment">Comment only</button>
         <button id="dw-agent">New agent</button>
+        <button id="dw-rerun" title="Clear the previous run's context and fire a fresh agent">Re-run fresh</button>
         <button id="dw-flag">Flag</button>
         <button id="dw-archive">Archive</button>
       </span>
@@ -414,6 +531,93 @@
     <div class="row">
       <button class="btn-sm ghost" id="m-cancel">Cancel</button>
       <button class="btn-sm accent" id="m-save">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- RUN VIEWER MODAL -->
+<div class="modal" id="modal-run">
+  <div class="box" style="width:min(700px,94vw)">
+    <h3 id="run-heading">Run</h3>
+    <div class="src-activity" id="run-body" style="border:1px solid #eeebe4;border-radius:10px;margin-bottom:12px;max-height:60vh;overflow-y:auto"></div>
+    <div class="row">
+      <button class="btn-sm ghost" id="run-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LANE MODAL -->
+<div class="modal" id="modal-lane">
+  <div class="box">
+    <h3 id="l-heading">New lane</h3>
+    <input id="l-title" placeholder="Title (e.g. In Review)" />
+    <div class="row">
+      <input id="l-accent" type="color" style="height:38px;padding:3px" title="Lane accent color" />
+      <input id="l-stale" placeholder="Stale after (30m, 4h, 2d…) — optional" />
+    </div>
+    <label class="cb" style="margin-bottom:10px"><input type="checkbox" id="l-attn"> always needs attention (triage lane)</label>
+    <div style="font-size:11px;font-weight:700;color:#a8a29a;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Flow</div>
+    <div class="row">
+      <select id="l-done" title="When this lane's agent run completes, the card funnels here (and the target's automations fire)"></select>
+      <input id="l-maxv" type="number" min="1" step="1" placeholder="max visits (default 2)" title="Entering this lane more times than this parks the card in the paused lane" />
+    </div>
+    <input id="l-jira" placeholder="Jira status this lane mirrors (e.g. In Review) — optional" title="Jira sync moves issues with this status here; dragging a card here transitions the issue (when push is on)" />
+    <div style="font-size:11px;font-weight:700;color:#a8a29a;text-transform:uppercase;letter-spacing:0.05em;margin:6px 0 4px">Automations</div>
+    <div id="l-autos" style="margin-bottom:10px"></div>
+    <div class="row" id="l-order" style="display:none;margin-bottom:10px">
+      <button class="btn-sm ghost" id="l-left">← Move left</button>
+      <button class="btn-sm ghost" id="l-right">Move right →</button>
+    </div>
+    <div id="l-delwrap" style="display:none;margin-bottom:10px">
+      <div class="row">
+        <select id="l-moveto"></select>
+        <button class="btn-sm ghost" id="l-delete" style="color:#b91c1c">Delete lane</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn-sm ghost" id="l-cancel">Cancel</button>
+      <button class="btn-sm accent" id="l-save">Save to board.yml</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTOMATION MODAL -->
+<div class="modal" id="modal-rule">
+  <div class="box">
+    <h3 id="r-heading">New automation</h3>
+    <input id="r-name" placeholder="Name (optional, e.g. fire agent)" />
+    <textarea id="r-run" spellcheck="false" placeholder="Shell command — e.g. claude -p {{prompt}} --output-format json&#10;Placeholders: {{prompt}} {{message}} {{card.pr}} {{card.ticket}} {{card.session}}"></textarea>
+    <textarea id="r-inst" spellcheck="false" style="min-height:52px" placeholder="Agent instruction (optional) — what {{prompt}} tells the agent to do, e.g. &quot;Review the PR diff and post a summary comment.&quot; The card's title, refs, and recent activity are included automatically. Default: continue the work item to completion."></textarea>
+    <div class="row">
+      <select id="r-col"></select>
+      <select id="r-trigger">
+        <option value="on_enter">when a card enters</option>
+        <option value="on_leave">when a card leaves</option>
+      </select>
+    </div>
+    <div style="margin-bottom:4px">
+      <label class="cb"><input type="checkbox" id="r-bg"> run in background</label>
+      <label class="cb"><input type="checkbox" id="r-cap"> capture Claude session</label>
+    </div>
+    <div class="row">
+      <button class="btn-sm ghost" id="r-delete" style="color:#b91c1c;display:none">Delete</button>
+      <button class="btn-sm ghost" id="r-cancel">Cancel</button>
+      <button class="btn-sm accent" id="r-save">Save to board.yml</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONNECTOR SETUP MODAL -->
+<div class="modal" id="modal-conn">
+  <div class="box">
+    <h3 id="c-heading">Connect</h3>
+    <div id="c-desc" style="font-size:12.5px;color:#78716c;line-height:1.55;margin-bottom:12px"></div>
+    <div id="c-env"></div>
+    <div id="c-inst" style="font-size:12px;color:#8a847c;line-height:1.55;margin-bottom:12px"></div>
+    <div id="c-err" style="font-size:12px;color:#b91c1c;line-height:1.5;margin-bottom:10px"></div>
+    <div class="row">
+      <button class="btn-sm ghost" id="c-cancel">Cancel</button>
+      <button class="btn-sm accent" id="c-save">Connect</button>
     </div>
   </div>
 </div>
@@ -497,6 +701,25 @@ function toast(head, body, ms = 5200) {
 }
 
 /* ---------- card decoration ---------- */
+// Deterministic ref → URL. Ticket keys resolve through defaults.ticket_url.
+function refUrl(c, which) {
+  const v = c.refs?.[which];
+  if (!v) return null;
+  if (/^https?:/.test(v)) return v;
+  if (which === 'ticket' && DATA.board.ticket_url) return DATA.board.ticket_url.replace(/\/?$/, '/') + v;
+  return null;
+}
+
+function refLinkChips(c) {
+  const out = [];
+  for (const [which, label] of [['pr', 'PR'], ['ticket', c.refs?.ticket || 'Ticket'], ['slack', 'Slack']]) {
+    const url = refUrl(c, which);
+    if (url) out.push(`<a href="${esc(url)}" target="_blank">${esc(label)} ↗</a>`);
+    else if (c.refs?.[which]) out.push(esc(c.refs[which]));
+  }
+  return out;
+}
+
 function cardRef(c) {
   if (c.refs?.ticket) return c.refs.ticket;
   if (c.refs?.pr) { const m = /(\d+)\s*$/.exec(c.refs.pr); return m ? '#' + m[1] : 'PR'; }
@@ -510,9 +733,10 @@ function srcMeta(c) {
   return null;
 }
 function cardStatus(c) {
+  // a live agent run outranks everything — while it works, that's the story
+  if (c.pending_session_logs?.length) return { dot: '#ea580c', pulse: true, label: 'Agent working', text: '#c2410c' };
   const attn = (c.attention || []).length;
   if (attn) return { dot: '#b91c1c', pulse: true, label: `Needs attention · ${attn}`, text: '#b91c1c' };
-  if (c.pending_session_logs?.length) return { dot: '#ea580c', pulse: true, label: 'Agent working', text: '#c2410c' };
   if (c.pr_state?.checks === 'pending') return { dot: '#7c3aed', pulse: true, label: 'CI running', text: '#6d28d9' };
   if (c.sessions?.length) return { dot: '#0d9488', pulse: false, label: `${c.sessions.length} session${c.sessions.length === 1 ? '' : 's'}`, text: '#0f766e' };
   return null;
@@ -526,7 +750,13 @@ function ticketHtml(c) {
     <div class="top">
       <span class="type-chip" style="color:${tm.color};background:${tm.bg}">${tm.label}</span>
       ${sm ? `<span class="src-badge" style="color:${sm.color};background:${sm.bg}">${esc(sm.short)}</span>` : ''}
-      <span class="ref">${esc(cardRef(c))}</span>
+      ${(() => {
+        const which = c.refs?.pr ? 'pr' : c.refs?.ticket ? 'ticket' : c.refs?.slack ? 'slack' : null;
+        const url = which && refUrl(c, which);
+        return url
+          ? `<a class="ref" href="${esc(url)}" target="_blank" onclick="event.stopPropagation()" style="color:inherit">${esc(cardRef(c))} ↗</a>`
+          : `<span class="ref">${esc(cardRef(c))}</span>`;
+      })()}
     </div>
     <div class="title">${esc(c.title)}</div>
     <div class="foot">
@@ -547,8 +777,11 @@ function renderBoard() {
         <span class="lane-dot" style="background:${col.accent}"></span>
         <span class="lane-name">${esc(col.title)}</span>
         <span class="lane-count">${laneCards.length}</span>
+        <span style="flex:1"></span>
+        <button class="lane-edit" data-col="${esc(col.id)}" title="Edit lane">✎</button>
       </div>
       ${auto ? `<div class="lane-auto"><span class="k">⚡ ON ENTER</span><span class="v">${esc(auto.name)}</span></div>` : ''}
+      ${col.on_done ? `<div class="lane-auto"><span class="k">↦ DONE</span><span class="v">→ ${esc(board.columns.find((x) => x.id === col.on_done)?.title ?? col.on_done)}</span></div>` : ''}
       <div class="lane-body" data-lane="${col.id}">${laneCards.map(ticketHtml).join('')}</div>
     </div>`;
   }).join('') + `<button class="add-lane" id="btn-add-lane">+ Add lane</button>`;
@@ -587,8 +820,11 @@ function renderBoard() {
     });
   });
   const addLane = $('#btn-add-lane');
-  if (addLane) addLane.addEventListener('click', () =>
-    toast('Lanes live in board.yml', 'Add a column under columns: — the board picks it up on refresh.'));
+  if (addLane) addLane.addEventListener('click', () => openLaneModal(null));
+  $$('#lanes .lane-edit').forEach((btn) => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openLaneModal(DATA.board.columns.find((c) => c.id === btn.dataset.col));
+  }));
 }
 
 /* ---------- activity ---------- */
@@ -647,17 +883,30 @@ function renderSources() {
   $('#tool-add-row').innerHTML = missing.map((c) =>
     `<button class="add-chip" data-conn="${c.id}"><span class="short">${esc(c.id.slice(0, 2).toUpperCase())}</span>+ ${esc(c.title)}</button>`,
   ).join('');
-  $$('#tool-add-row .add-chip').forEach((btn) => btn.addEventListener('click', () => {
+  $$('#tool-add-row .add-chip').forEach((btn) => btn.addEventListener('click', async () => {
     const c = setup.connectors.find((x) => x.id === btn.dataset.conn);
-    const cmd = c.setup ? `\n\n${c.setup}` : '';
-    if (c.setup && navigator.clipboard) navigator.clipboard.writeText(c.setup);
-    alert(`${c.title}\n\n${c.instructions || ''}${cmd}${c.setup ? '\n\n(setup command copied to clipboard — run it in your terminal, then Re-check)' : ''}`);
+    // Tiles that need credentials or manual steps get the form modal; the
+    // rest set up in one click.
+    if ((c.needs_env || []).length || !c.setup) return openConnModal(c);
+    btn.disabled = true;
+    const lbl = btn.innerHTML;
+    btn.innerHTML = `<span class="short">…</span>Adding ${esc(c.title)}…`;
+    const data = await connectorSetup(c.id, {});
+    if (data.ok) {
+      DATA = data;
+      render();
+      toast(`${c.title} added`, data.instructions || 'Tile is set up — it appears under Connected tools.', 9000);
+    } else {
+      btn.disabled = false; btn.innerHTML = lbl;
+      if (data.missing || data.manual) openConnModal(c, data); // board.yml override declared env late
+      else toast(`${c.title} setup failed`, `${data.error || 'unknown error'}${data.output ? ` — ${data.output}` : ''}`, 12000);
+    }
   }));
 
   $('#prompt-cards').innerHTML = setup.sources.map((s) => {
     const st = s.status || {};
     const busy = s.pulling || st.last_status === 'running';
-    const last = busy ? '⏳ pulling — cards land on refresh'
+    const last = busy ? `⏳ pulling${s.pull_started ? ` — started ${ago(s.pull_started)}` : ''} — watch live below`
       : st.last_status === 'ok' ? `Last run: <b>${esc(st.last_summary || 'ok')}</b> · ${ago(st.last_run)}`
       : st.last_status === 'error' ? `<span style="color:#b91c1c">Last run failed: ${esc(st.last_summary || 'error')}</span>`
       : 'Never run';
@@ -671,10 +920,12 @@ function renderSources() {
       <div class="prompt-foot">
         <span class="last">${last}</span>
         <span class="sp"></span>
+        <button class="btn-sm ghost" data-act="activity">${busy ? 'Watch live' : 'Activity'}</button>
         <button class="btn-sm ghost" data-act="edit">Edit</button>
         <button class="btn-sm ghost" data-act="save" style="display:none">Save prompt</button>
         <button class="btn-sm accent" data-act="run" ${busy ? 'disabled' : ''}>Run now</button>
       </div>
+      <div class="src-activity" style="display:none"></div>
     </div>`;
   }).join('') || '<div style="font-size:12.5px;color:#a8a29a;margin-bottom:14px">No sources yet — add one below.</div>';
 
@@ -697,12 +948,64 @@ function renderSources() {
       e.currentTarget.disabled = true;
       try {
         DATA = await api('/api/source/pull', { source: id });
+        activityOpen = id; // auto-open the live feed for the run just started
         render();
-        toast('Source scan started', `Claude is scanning “${id}” with its tools — new cards appear when it finishes.`);
+        toast('Source scan started', `Claude is scanning “${id}” — watch it live in the activity feed.`);
       } catch (err) { toast('Pull failed', err.message); render(); }
     });
+    cardEl.querySelector('[data-act="activity"]').addEventListener('click', () => {
+      activityOpen = activityOpen === id ? null : id;
+      renderSources();
+    });
   });
+
+  // restore the open activity panel across re-renders
+  if (activityOpen) {
+    const panel = document.querySelector(`.prompt-card[data-src="${CSS.escape(activityOpen)}"] .src-activity`);
+    if (panel) {
+      panel.style.display = '';
+      panel.innerHTML = panel.innerHTML || '<div class="act-h">Loading…</div>';
+      loadActivity(activityOpen);
+    } else activityOpen = null;
+  }
 }
+
+/* ---------- source activity feed ---------- */
+let activityOpen = null; // source id whose activity panel is expanded
+
+async function loadActivity(id) {
+  const panel = document.querySelector(`.prompt-card[data-src="${CSS.escape(id)}"] .src-activity`);
+  if (!panel) return;
+  try {
+    const d = await api(`/api/source/activity?source=${encodeURIComponent(id)}`);
+    const hist = (d.history || []).map((h) => {
+      const dur = h.started && h.finished
+        ? `${Math.max(1, Math.round((Date.parse(h.finished) - Date.parse(h.started)) / 1000))}s` : '';
+      return `<div class="act-run"><span class="dot ${h.status === 'ok' ? 'ok' : 'error'}"></span>
+        <span>${esc(h.summary || h.status)}</span>
+        <span class="dim">· ${h.finished ? ago(h.finished) : ''}${dur ? ` · ${dur}` : ''}</span></div>`;
+    }).join('') || '<div class="act-run"><span class="dim">no runs yet</span></div>';
+    const feed = (d.events || []).map((e) => `<div class="act-ev ${e.kind}">${esc(e.text)}</div>`).join('');
+    const feedHead = d.running
+      ? `<span class="act-live"><span class="d"></span>running — started ${ago(d.started)}</span>`
+      : 'Last run log';
+    panel.innerHTML = `
+      <div class="act-h">Run history</div>${hist}
+      <div class="act-h">${feedHead}</div>
+      <div class="act-feed">${feed || '<div class="act-ev">no log yet — events appear as Claude works</div>'}</div>`;
+    const feedEl = panel.querySelector('.act-feed');
+    if (d.running) feedEl.scrollTop = feedEl.scrollHeight; // follow the tail live
+  } catch (err) {
+    panel.innerHTML = `<div class="act-run"><span class="dot error"></span>${esc(err.message)}</div>`;
+  }
+}
+
+// live-follow: refresh the open feed while its source is pulling
+setInterval(() => {
+  if (!activityOpen || !document.querySelector('#view-sources.active')) return;
+  const s = DATA?.setup?.sources?.find((x) => x.id === activityOpen);
+  if (s?.pulling) loadActivity(activityOpen);
+}, 3000);
 
 /* ---------- automations page ---------- */
 function renderAutomations() {
@@ -711,24 +1014,158 @@ function renderAutomations() {
   const chip = (col) => `<span class="lane-chip"><span class="d" style="background:${col.accent}"></span>${esc(col.title)}</span>`;
   const rules = [];
   for (const col of cols) {
-    for (const a of col.on_enter || []) rules.push({ from: null, to: col, trigger: `on enter · ${col.id}`, ...a });
-    for (const a of col.on_leave || []) rules.push({ from: col, to: null, trigger: `on leave · ${col.id}`, ...a });
+    for (const a of col.on_enter || []) rules.push({ col, kind: 'on_enter', trigger: `on enter · ${col.id}`, ...a });
+    for (const a of col.on_leave || []) rules.push({ col, kind: 'on_leave', trigger: `on leave · ${col.id}`, ...a });
   }
-  $('#rule-cards').innerHTML = rules.map((r) => `<div class="rule-card">
+  $('#rule-cards').innerHTML = rules.map((r, i) => `<div class="rule-card" data-rule="${i}">
     <div class="rule-row1">
-      ${r.from ? chip(r.from) : anyChip}<span class="rule-arrow">→</span>${r.to ? chip(r.to) : anyChip}
+      ${r.kind === 'on_leave' ? chip(r.col) : anyChip}<span class="rule-arrow">→</span>${r.kind === 'on_enter' ? chip(r.col) : anyChip}
       <span class="rule-status">Active</span>
-      <span class="toggle"><i></i></span>
+      <button class="btn-sm ghost" data-act="edit">Edit</button>
     </div>
     <div class="rule-row2"><b>${esc(r.name)}</b><span class="trig-chip">${esc(r.trigger)}</span>${r.background ? '<span class="tag-chip">background</span>' : ''}</div>
     <div class="rule-action">${esc(r.run)}</div>
-  </div>`).join('') || '<div style="font-size:12.5px;color:#a8a29a;margin-bottom:14px">No automations yet — give a column an on_enter action in board.yml.</div>';
-  $('#btn-add-rule').onclick = () =>
-    toast('Automations live in board.yml', 'Add on_enter / on_leave actions to a column — see templates/board.yml for the shape.');
+    ${r.instruction ? `<div class="rule-action" style="color:#78716c;font-family:inherit;font-style:italic">“${esc(r.instruction)}”</div>` : ''}
+  </div>`).join('') || '<div style="font-size:12.5px;color:#a8a29a;margin-bottom:14px">No automations yet — add one below.</div>';
+  $$('#rule-cards [data-act="edit"]').forEach((btn) => btn.addEventListener('click', () => {
+    ruleReturnLane = null; // entered from the Automations page, return there
+    openRuleModal(rules[btn.closest('.rule-card').dataset.rule]);
+  }));
+  $('#btn-add-rule').onclick = () => { ruleReturnLane = null; openRuleModal(null); };
+  renderTriagePanel();
+  renderSurfacePanel();
+  renderJiraPanel();
 }
 
+/* ---------- triage panel ---------- */
+let triageDirty = false;
+$('#triage-panel').addEventListener('input', () => { triageDirty = true; });
+
+function renderTriagePanel() {
+  const t = DATA.triage;
+  $('#t-status').textContent = t?.running ? 'running…'
+    : t?.last_run ? `last: ${t.last_summary ?? t.last_status} · ${ago(t.last_run)}` : 'never run';
+  $('#t-run').disabled = !!t?.running;
+  $('#t-run').textContent = t?.running ? 'Running…' : 'Run triage now';
+  if (triageDirty || $('#triage-panel').contains(document.activeElement)) return; // don't clobber edits
+  const cfg = DATA.triage_config || {};
+  $('#t-enabled').checked = cfg.enabled !== false;
+  $('#t-cols').innerHTML = DATA.board.columns.map((c) =>
+    `<label class="cb"><input type="checkbox" value="${c.id}" ${(cfg.columns || []).includes(c.id) ? 'checked' : ''}> ${esc(c.title)}</label>`).join('');
+  $$('#t-tools input').forEach((cb) => { cb.checked = (cfg.tools || []).includes(cb.value); });
+  $('#t-inst').value = cfg.instruction || '';
+}
+
+$('#t-save').addEventListener('click', async () => {
+  const columns = $$('#t-cols input:checked').map((cb) => cb.value);
+  if (!columns.length) return toast('Pick at least one lane', 'Triage needs somewhere to look.');
+  try {
+    DATA = await api('/api/triage/config', {
+      enabled: $('#t-enabled').checked,
+      columns,
+      tools: $$('#t-tools input:checked').map((cb) => cb.value),
+      instruction: $('#t-inst').value.trim(),
+    });
+    triageDirty = false;
+    render();
+    toast('Triage settings saved', 'Written to board.yml.');
+  } catch (err) { toast('Save failed', err.message); }
+});
+$('#t-run').addEventListener('click', () => $('#btn-triage').click());
+
+/* ---------- jira mirror panel ---------- */
+let jiraDirty = false;
+$('#jira-panel').addEventListener('input', () => { jiraDirty = true; });
+
+function renderJiraPanel() {
+  const j = DATA.jira;
+  $('#j-status').textContent = j?.running ? 'syncing…'
+    : j?.last_run ? `last: ${j.last_summary ?? j.last_status} · ${ago(j.last_run)}` : 'never synced';
+  $('#j-sync').disabled = !!j?.running || !DATA.jira_config?.enabled;
+  $('#j-sync').textContent = j?.running ? 'Syncing…' : 'Sync now';
+  if (jiraDirty || $('#jira-panel').contains(document.activeElement)) return;
+  const cfg = DATA.jira_config || {};
+  $('#j-enabled').checked = !!cfg.enabled;
+  $('#j-project').value = cfg.project || '';
+  $('#j-cfgissue').value = cfg.config_issue || '';
+  $('#j-jql').value = cfg.enabled ? (cfg.jql || '') : '';
+  $('#j-push').checked = cfg.push_moves !== false;
+  $('#j-lanes').checked = !!cfg.lanes_from_jira;
+  $('#j-comments').checked = !!cfg.comments;
+  $('#j-labels').checked = !!cfg.labels;
+}
+
+$('#j-save').addEventListener('click', async () => {
+  try {
+    DATA = await api('/api/jira/config', {
+      enabled: $('#j-enabled').checked,
+      project: $('#j-project').value.trim(),
+      jql: $('#j-jql').value.trim(),
+      push_moves: $('#j-push').checked,
+      lanes_from_jira: $('#j-lanes').checked,
+      config_issue: $('#j-cfgissue').value.trim(),
+      comments: $('#j-comments').checked,
+      labels: $('#j-labels').checked,
+    });
+    jiraDirty = false;
+    render();
+    toast('Jira mirror saved', $('#j-enabled').checked ? 'Map lanes to statuses in the lane modal, then Sync now.' : 'Mirror disabled.');
+  } catch (err) { toast('Save failed', err.message); }
+});
+$('#j-sync').addEventListener('click', async () => {
+  try {
+    DATA = await api('/api/jira/sync', {});
+    render();
+    toast('Jira sync running', 'Issues land as cards and move to their status lanes on refresh.');
+  } catch (err) { toast('Sync failed', err.message); }
+});
+
+/* ---------- surface (card details) panel ---------- */
+let surfaceDirty = false;
+$('#surface-panel').addEventListener('input', () => { surfaceDirty = true; });
+
+function renderSurfacePanel() {
+  if (surfaceDirty || $('#surface-panel').contains(document.activeElement)) return;
+  const cfg = DATA.surface_config || {};
+  $$('#sf-tools input').forEach((cb) => { cb.checked = (cfg.tools || []).includes(cb.value); });
+  $('#sf-inst').value = cfg.instruction || '';
+}
+
+$('#sf-save').addEventListener('click', async () => {
+  try {
+    DATA = await api('/api/surface/config', {
+      tools: $$('#sf-tools input:checked').map((cb) => cb.value),
+      instruction: $('#sf-inst').value.trim(),
+    });
+    surfaceDirty = false;
+    render();
+    toast('Card details settings saved', 'Written to board.yml.');
+  } catch (err) { toast('Save failed', err.message); }
+});
+
 /* ---------- connection page ---------- */
+let claudeCfgDirty = false;
+$('#claude-cfg').addEventListener('input', () => { claudeCfgDirty = true; });
+$('#cc-save').addEventListener('click', async () => {
+  try {
+    DATA = await api('/api/claude/config', {
+      model: $('#cc-model').value.trim(),
+      effort: $('#cc-effort').value,
+      args: $('#cc-args').value.trim(),
+    });
+    claudeCfgDirty = false;
+    render();
+    toast('Claude defaults saved', 'All board-fired runs pick this up from the next launch.');
+  } catch (err) { toast('Save failed', err.message); }
+});
+
 function renderConnection() {
+  if (!claudeCfgDirty && !$('#claude-cfg').contains(document.activeElement)) {
+    const cc = DATA.claude_config || {};
+    $('#cc-model').value = cc.model || '';
+    $('#cc-effort').value = cc.effort || '';
+    $('#cc-args').value = cc.args || '';
+  }
   const claude = DATA.setup.connectors.find((c) => c.id === 'claude');
   const st = claude?.status;
   const ok = st?.connected;
@@ -754,22 +1191,54 @@ function renderConnection() {
   $('#stat-runs').textContent = runsToday;
   $('#stat-cards').textContent = DATA.cards.length;
 
-  rows.sort((a, b) => Date.parse(b.sess.at || 0) - Date.parse(a.sess.at || 0));
-  $('#sess-list').innerHTML = rows.slice(0, 12).map((r) => {
+  // board-level runs (triage, source pulls) belong here too — they're Claude
+  // sessions even though no card owns them
+  const tr = DATA.triage;
+  if (tr?.running || tr?.last_run) {
+    rows.push({
+      board_run: { title: 'Board triage', kind: 'triage', id: null },
+      sess: { id: tr.last_session ?? (tr.running ? 'starting…' : '(no session recorded)'), label: tr.running ? '' : (tr.last_summary ?? ''), at: tr.last_run },
+      running: !!tr.running, latest: false,
+    });
+  }
+  const jr = DATA.jira;
+  if (jr?.running || jr?.last_run) {
+    rows.push({
+      board_run: { title: 'Jira sync', kind: 'jira', id: null },
+      sess: { id: jr.last_session ?? (jr.running ? 'starting…' : '(no session recorded)'), label: jr.running ? '' : (jr.last_summary ?? ''), at: jr.last_run },
+      running: !!jr.running, latest: false,
+    });
+  }
+  for (const s of DATA.setup.sources) {
+    if (s.pulling || s.status?.last_run) {
+      rows.push({
+        board_run: { title: `Source: ${s.title}`, kind: 'source', id: s.id },
+        sess: { id: s.status?.last_session ?? (s.pulling ? 'starting…' : '(no session recorded)'), label: s.pulling ? '' : (s.status?.last_summary ?? ''), at: s.status?.last_run ?? s.pull_started },
+        running: !!s.pulling, latest: false,
+      });
+    }
+  }
+
+  rows.sort((a, b) => (b.running - a.running) || Date.parse(b.sess.at || 0) - Date.parse(a.sess.at || 0));
+  $('#sess-list').innerHTML = rows.slice(0, 14).map((r, i) => {
     const st2 = r.running ? { l: 'running', c: '#c2410c', d: '#ea580c', pulse: true }
       : r.latest ? { l: 'latest', c: '#0f766e', d: '#0d9488', pulse: false }
       : { l: 'idle', c: '#a8a29a', d: '#c4bfb5', pulse: false };
-    return `<div class="sess-row" data-card="${r.card.id}">
+    const nav = r.board_run ? `data-run-kind="${r.board_run.kind}" data-run-id="${esc(r.board_run.id ?? '')}" data-run-title="${esc(r.board_run.title)}"` : `data-card="${r.card.id}"`;
+    return `<div class="sess-row" ${nav}>
       <span class="sess-dot${st2.pulse ? ' pulse' : ''}" style="background:${st2.d};${st2.pulse ? 'animation:pulseDot 1.4s infinite;' : ''}"></span>
       <div style="flex:1;min-width:0">
-        <div class="t">${esc(r.card.title)}</div>
+        <div class="t">${esc(r.board_run ? r.board_run.title : r.card.title)}</div>
         <div class="m">${esc(r.sess.id)} · ${esc(r.sess.label || '')}</div>
       </div>
       <span class="st" style="color:${st2.c}">${st2.l}</span>
       <span class="wh">${r.sess.at ? ago(r.sess.at) : ''}</span>
     </div>`;
   }).join('') || '<div style="padding:16px;font-size:12.5px;color:#a8a29a">No Claude sessions yet — drag a card into an agent lane or use “New agent” in a card.</div>';
-  $$('#sess-list .sess-row').forEach((el) => el.addEventListener('click', () => { setView('board'); openDrawer(el.dataset.card); }));
+  $$('#sess-list .sess-row').forEach((el) => el.addEventListener('click', () => {
+    if (el.dataset.card) { setView('board'); openDrawer(el.dataset.card); }
+    else if (el.dataset.runKind) openRunModal(el.dataset.runKind, el.dataset.runId || null, el.dataset.runTitle);
+  }));
 }
 
 /* ---------- drawer ---------- */
@@ -778,6 +1247,9 @@ const LOG_ROLE = {
   action:  { cls: 'tool', role: 'automation' },
   sync:    { cls: 'system', role: 'sync' },
   source:  { cls: 'source', role: 'source' },
+  triage:  { cls: 'system', role: 'triage' },
+  flow:    { cls: 'system', role: 'flow' },
+  jira:    { cls: 'system', role: 'jira' },
   session: { cls: 'agent', role: 'session' },
   move:    { cls: 'system', role: 'board' },
   create:  { cls: 'system', role: 'board' },
@@ -801,9 +1273,7 @@ function fillDrawer(id) {
   $('#dw-close').addEventListener('click', closeDrawer);
   $('#dw-title').textContent = c.title;
 
-  const refLinks = [];
-  if (c.refs?.pr) refLinks.push(`<a href="${esc(c.refs.pr)}" target="_blank">PR</a>`);
-  if (c.refs?.slack) refLinks.push(`<a href="${esc(c.refs.slack)}" target="_blank">Slack</a>`);
+  const refLinks = refLinkChips(c);
   $('#dw-meta').innerHTML = `
     <span class="item"><span class="d" style="background:${col.accent || '#c4bfb5'}"></span>${esc(col.title || c.column)}</span>
     ${st ? `<span class="item" style="color:${st.text};font-weight:600"><span class="status-dot${st.pulse ? ' pulse' : ''}" style="background:${st.dot}"></span>${esc(st.label)}</span>` : ''}
@@ -811,17 +1281,49 @@ function fillDrawer(id) {
     <span class="dim">${c.origin ? `from ${esc(c.origin.source)} · ` : ''}updated ${ago(c.updated)}</span>`;
 
   const descBits = [];
+  const enriching = !!c.pending_enrich;
+  const s = c.surface;
+  if (s?.summary) descBits.push(esc(s.summary));
   const firstNote = (c.log || []).find((e) => e.kind === 'comment');
-  if (firstNote) descBits.push(esc(firstNote.text));
-  if (c.pr_state) descBits.push(`<span class="mono" style="font-size:11px;color:#78716c">PR ${esc(c.pr_state.state)} · review=${esc(c.pr_state.review)} · checks=${esc(c.pr_state.checks)} · mergeable=${esc(c.pr_state.mergeable)}</span>`);
-  if (c.refs?.ticket) descBits.push(`<span class="mono" style="font-size:11px;color:#78716c">Ticket ${esc(c.refs.ticket)}</span>`);
+  if (!s?.summary && firstNote) descBits.push(esc(firstNote.text));
+  const facts = Object.entries(s?.facts || {});
+  if (facts.length) {
+    descBits.push(`<span class="mono" style="font-size:11px;color:#78716c;line-height:1.9">${facts.map(([k, v]) =>
+      `<b style="color:#57534e">${esc(k)}</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')}</span>`);
+  }
+  if ((s?.links || []).length) {
+    descBits.push(s.links.map((l) =>
+      `<a href="${esc(l.url)}" target="_blank" style="font-size:11.5px;color:#1d4ed8;text-decoration:none;border:1px solid #dbe3f8;background:#f2f5fd;border-radius:6px;padding:2px 8px;margin-right:6px">${esc(l.label)} ↗</a>`).join(''));
+  }
+  if (!s && c.pr_state) descBits.push(`<span class="mono" style="font-size:11px;color:#78716c">PR ${esc(c.pr_state.state)} · review=${esc(c.pr_state.review)} · checks=${esc(c.pr_state.checks)} · mergeable=${esc(c.pr_state.mergeable)}</span>`);
+  descBits.push(`<span style="font-size:11px;color:#a8a29a">${s?.updated ? `details as of ${ago(s.updated)} · ` : ''}${enriching
+    ? '<span class="act-live"><span class="d"></span>refreshing details…</span>'
+    : `<a href="#" id="dw-enrich" style="color:#c2410c;text-decoration:none">↻ Refresh details</a>`}</span>`);
   $('#dw-desc').innerHTML = descBits.join('<br><br>') || `<span style="color:#a8a29a">No notes yet — the activity below is the card's full history.</span>`;
+  const enrichBtn = $('#dw-enrich');
+  if (enrichBtn) enrichBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      DATA = await api('/api/card/enrich', { card: id });
+      render();
+      toast('Refreshing details', 'An agent is fetching live PR/ticket/Slack state for this card.');
+    } catch (err) { toast('Refresh failed', err.message); }
+  });
 
   $('#dw-attn').innerHTML = (c.attention || []).length
     ? `<div class="dw-attn">${c.attention.map((a) => `⚠ ${esc(a.reason)}`).join('<br>')}</div>` : '';
 
   const latest = c.sessions?.length ? c.sessions[c.sessions.length - 1] : null;
-  $('#dw-sess-id').textContent = latest ? latest.id : 'none yet — Send starts one';
+  const agentBusy = !!c.pending_session_logs?.length;
+  $('#dw-sess-id').innerHTML = agentBusy
+    ? `${latest ? esc(latest.id) : 'starting…'} <span class="act-live"><span class="d"></span>agent working — reply lands here</span>`
+    : (latest ? esc(latest.id) : 'none yet — Send starts one');
+  // "View run": what that session actually did (parsed from its run log)
+  $('#dw-run-btn').style.display = (latest || agentBusy) ? '' : 'none';
+  $('#dw-reset-btn').style.display = (latest && !agentBusy) ? '' : 'none';
+  $('#dw-run-btn').textContent = dwRunOpen ? 'Hide run' : agentBusy ? 'Watch run' : 'View run';
+  $('#dw-run').style.display = dwRunOpen ? '' : 'none';
+  if (dwRunOpen) loadSessionRun(id, latest?.id);
 
   $('#dw-msgs').innerHTML = (c.log || []).slice(-30).map((e) => {
     const m = LOG_ROLE[e.kind] || LOG_ROLE.update;
@@ -833,9 +1335,40 @@ function fillDrawer(id) {
 }
 function openDrawer(id) {
   openCardId = id;
+  dwRunOpen = false;
+  $('#dw-run').innerHTML = '';
   fillDrawer(id);
   $('#drawer').classList.add('open');
   $('#overlay').classList.add('open');
+}
+
+/* ---------- session run viewer ---------- */
+let dwRunOpen = false;
+let dwRunLoading = false;
+
+$('#dw-run-btn').addEventListener('click', () => {
+  dwRunOpen = !dwRunOpen;
+  if (openCardId) fillDrawer(openCardId);
+});
+
+async function loadSessionRun(cardId, sessionId) {
+  if (dwRunLoading) return; // fillDrawer polls every few seconds — don't stack requests
+  dwRunLoading = true;
+  try {
+    const q = sessionId ? `&session=${encodeURIComponent(sessionId)}` : '';
+    const d = await api(`/api/session/activity?card=${encodeURIComponent(cardId)}${q}`);
+    const feed = (d.events || []).map((e) => `<div class="act-ev ${e.kind}">${esc(e.text)}</div>`).join('');
+    $('#dw-run').innerHTML = `
+      <div class="act-h">${d.running ? '<span class="act-live"><span class="d"></span>run in progress</span>' : 'Run log'}${d.log ? ` <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(d.log)}</span>` : ''}</div>
+      <div class="act-feed">${feed || '<div class="act-ev">no run log found for this session</div>'}</div>`;
+    if (d.running) {
+      const el = $('#dw-run .act-feed');
+      el.scrollTop = el.scrollHeight;
+    }
+  } catch (err) {
+    $('#dw-run').innerHTML = `<div class="act-run"><span class="dot error"></span>${esc(err.message)}</div>`;
+  }
+  dwRunLoading = false;
 }
 function closeDrawer() {
   openCardId = null;
@@ -883,6 +1416,23 @@ $('#dw-agent').addEventListener('click', () => {
   drawerAction(() => api('/api/agent', { card: openCardId, instruction: text }),
     'New agent launched', 'A fresh Claude session is picking the card up.');
 });
+$('#dw-reset-btn').addEventListener('click', () => {
+  if (!openCardId) return;
+  if (!confirm('Clear this card’s sessions and agent replies? The next run starts with clean context.')) return;
+  drawerAction(() => api('/api/session/clear', { card: openCardId }),
+    'Agent context reset', 'Sessions and replies cleared — “New agent” or “Re-run fresh” starts clean.');
+});
+$('#dw-rerun').addEventListener('click', async () => {
+  if (!openCardId) return;
+  if (!confirm('Clear the previous run’s context and fire a fresh agent?')) return;
+  const text = $('#dw-input').value.trim();
+  $('#dw-input').value = '';
+  try {
+    await api('/api/session/clear', { card: openCardId });
+    drawerAction(() => api('/api/agent', { card: openCardId, instruction: text || undefined }),
+      'Re-running fresh', 'Old context cleared — a new Claude session is picking the card up.');
+  } catch (err) { toast('Re-run failed', err.message); }
+});
 $('#dw-flag').addEventListener('click', () => {
   const reason = prompt('Flag reason:');
   if (!reason || !openCardId) return;
@@ -908,6 +1458,18 @@ $('#btn-activity').addEventListener('click', () => {
   showActivity = !showActivity;
   $('#activity').classList.toggle('hidden', !showActivity);
 });
+$('#btn-triage').addEventListener('click', async () => {
+  const btn = $('#btn-triage');
+  btn.disabled = true; btn.textContent = 'Triaging…';
+  try {
+    DATA = await api('/api/triage', {});
+    render();
+    if (DATA.triage?.running) toast('Triage running', 'An agent is checking live PR/ticket state — moves land on refresh, reasons on each card.');
+    else toast('Nothing to triage', DATA.summary || 'The triage lanes are empty.');
+  } catch (err) { toast('Triage failed', err.message); }
+  btn.disabled = false; btn.textContent = 'Triage';
+});
+
 $('#btn-run-sources').addEventListener('click', async () => {
   const btn = $('#btn-run-sources');
   const sources = DATA.setup.sources.filter((s) => s.enabled !== false);
@@ -970,6 +1532,246 @@ $('#s-save').addEventListener('click', async () => {
   } catch (err) { toast('Save failed', err.message); }
 });
 
+/* ---------- run viewer modal (triage / source runs) ---------- */
+let openRun = null; // {kind, id} while the modal is open
+
+async function loadRunModal() {
+  if (!openRun) return;
+  try {
+    const q = openRun.id ? `&id=${encodeURIComponent(openRun.id)}` : '';
+    const d = await api(`/api/run/activity?kind=${openRun.kind}${q}`);
+    const feed = (d.events || []).map((e) => `<div class="act-ev ${e.kind}">${esc(e.text)}</div>`).join('');
+    $('#run-body').innerHTML = `
+      <div class="act-h">${d.running ? '<span class="act-live"><span class="d"></span>running…</span>' : 'Run log'}${d.log ? ` <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(d.log)}</span>` : ''}</div>
+      <div class="act-feed" style="max-height:none;border:none;padding:0">${feed || '<div class="act-ev">no run log found</div>'}</div>`;
+    if (d.running) $('#run-body').scrollTop = $('#run-body').scrollHeight;
+  } catch (err) {
+    $('#run-body').innerHTML = `<div class="act-run"><span class="dot error"></span>${esc(err.message)}</div>`;
+  }
+}
+
+function openRunModal(kind, id, title) {
+  openRun = { kind, id };
+  $('#run-heading').textContent = title || (kind === 'triage' ? 'Board triage' : `Source: ${id}`);
+  $('#run-body').innerHTML = '<div class="act-h">Loading…</div>';
+  $('#modal-run').classList.add('open');
+  loadRunModal();
+}
+$('#run-close').addEventListener('click', () => { openRun = null; $('#modal-run').classList.remove('open'); });
+// follow the tail while the run is live
+setInterval(() => {
+  if (openRun && $('#modal-run').classList.contains('open')) loadRunModal();
+  else openRun = null;
+}, 3000);
+
+/* ---------- lane modal ---------- */
+let editingLaneId = null;
+
+function openLaneModal(col) {
+  editingLaneId = col?.id ?? null;
+  $('#l-heading').textContent = col ? `Edit lane: ${col.title}` : 'New lane';
+  $('#l-title').value = col?.title ?? '';
+  $('#l-accent').value = col?.accent ?? '#a8a29a';
+  $('#l-stale').value = col?.stale_after ?? '';
+  $('#l-attn').checked = !!col?.attention;
+  $('#l-done').innerHTML = '<option value="">when done: stay put</option>' + DATA.board.columns
+    .filter((c) => c.id !== col?.id)
+    .map((c) => `<option value="${c.id}">when done → ${esc(c.title)}</option>`).join('');
+  $('#l-done').value = col?.on_done ?? '';
+  $('#l-maxv').value = col?.max_visits ?? '';
+  $('#l-jira').value = col?.jira_status ?? '';
+
+  // this lane's automations, editable right here — Edit/Add jump into the
+  // rule modal and come back to this lane when done
+  const laneRules = [];
+  if (col) {
+    for (const a of col.on_enter ?? []) laneRules.push({ col, kind: 'on_enter', ...a });
+    for (const a of col.on_leave ?? []) laneRules.push({ col, kind: 'on_leave', ...a });
+  }
+  $('#l-autos').innerHTML = !col
+    ? '<span style="font-size:12px;color:#a8a29a">Save the lane first, then add automations.</span>'
+    : (laneRules.map((r, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0ede6">
+        <span class="trig-chip">${r.kind === 'on_enter' ? 'on enter' : 'on leave'}</span>
+        <span style="flex:1;font-size:12px;color:#57534e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.run)}">${esc(r.name || r.run)}</span>
+        <button class="btn-sm ghost" data-lauto="${i}">Edit</button>
+      </div>`).join('')
+      + `<button class="btn-sm ghost" id="l-add-auto" style="width:100%;margin-top:8px">+ Add automation</button>`);
+  $$('#l-autos [data-lauto]').forEach((btn) => btn.addEventListener('click', () => {
+    $('#modal-lane').classList.remove('open');
+    ruleReturnLane = col.id;
+    openRuleModal(laneRules[btn.dataset.lauto]);
+  }));
+  const addAuto = $('#l-add-auto');
+  if (addAuto) addAuto.addEventListener('click', () => {
+    $('#modal-lane').classList.remove('open');
+    ruleReturnLane = col.id;
+    openRuleModal(null, col.id);
+  });
+  $('#l-order').style.display = col ? '' : 'none';
+  $('#l-delwrap').style.display = col ? '' : 'none';
+  if (col) {
+    const others = DATA.board.columns.filter((c) => c.id !== col.id);
+    const occupants = DATA.cards.filter((c) => c.column === col.id).length;
+    $('#l-moveto').innerHTML = others.map((c) => `<option value="${c.id}">cards → ${esc(c.title)}</option>`).join('');
+    $('#l-moveto').style.display = occupants ? '' : 'none';
+    $('#l-delete').textContent = occupants ? `Delete (${occupants} card${occupants === 1 ? '' : 's'})` : 'Delete lane';
+  }
+  $('#modal-lane').classList.add('open');
+  $('#l-title').focus();
+}
+$('#l-cancel').addEventListener('click', () => $('#modal-lane').classList.remove('open'));
+$('#l-save').addEventListener('click', async () => {
+  const title = $('#l-title').value.trim();
+  if (!title) return toast('Title required', null);
+  try {
+    DATA = await api('/api/column/save', {
+      orig_id: editingLaneId,
+      title,
+      accent: $('#l-accent').value,
+      attention: $('#l-attn').checked,
+      stale_after: $('#l-stale').value.trim(),
+      on_done: $('#l-done').value,
+      max_visits: $('#l-maxv').value.trim(),
+      jira_status: $('#l-jira').value.trim(),
+    });
+    render();
+    $('#modal-lane').classList.remove('open');
+    toast('Lane saved', 'Written to board.yml.');
+  } catch (err) { toast('Save failed', err.message); }
+});
+for (const [sel, dir] of [['#l-left', -1], ['#l-right', 1]]) {
+  $(sel).addEventListener('click', async () => {
+    if (!editingLaneId) return;
+    try { DATA = await api('/api/column/move', { id: editingLaneId, dir }); render(); }
+    catch (err) { toast('Move failed', err.message); }
+  });
+}
+$('#l-delete').addEventListener('click', async () => {
+  if (!editingLaneId || !confirm('Delete this lane?')) return;
+  try {
+    DATA = await api('/api/column/delete', { id: editingLaneId, move_to: $('#l-moveto').value || null });
+    render();
+    $('#modal-lane').classList.remove('open');
+    toast('Lane deleted', 'Removed from board.yml.');
+  } catch (err) { toast('Delete failed', err.message); }
+});
+
+/* ---------- automation modal ---------- */
+let editingRule = null; // {column, trigger, index} of the rule being edited
+let ruleReturnLane = null; // lane modal to reopen when this modal closes
+
+function closeRuleModal() {
+  $('#modal-rule').classList.remove('open');
+  if (ruleReturnLane) {
+    const col = DATA.board.columns.find((c) => c.id === ruleReturnLane);
+    ruleReturnLane = null;
+    if (col) openLaneModal(col);
+  }
+}
+
+function openRuleModal(rule, presetColumn = null) {
+  editingRule = rule ? { column: rule.col.id, trigger: rule.kind, index: rule.index } : null;
+  $('#r-heading').textContent = rule ? 'Edit automation' : 'New automation';
+  $('#r-name').value = rule?.name ?? '';
+  $('#r-run').value = rule?.run ?? '';
+  $('#r-inst').value = rule?.instruction ?? '';
+  $('#r-col').innerHTML = DATA.board.columns.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
+  if (rule) $('#r-col').value = rule.col.id;
+  else if (presetColumn) $('#r-col').value = presetColumn;
+  $('#r-trigger').value = rule?.kind ?? 'on_enter';
+  $('#r-bg').checked = !!rule?.background;
+  $('#r-cap').checked = !!rule?.capture_session;
+  $('#r-delete').style.display = rule ? '' : 'none';
+  $('#modal-rule').classList.add('open');
+}
+$('#r-cancel').addEventListener('click', closeRuleModal);
+$('#r-save').addEventListener('click', async () => {
+  const run = $('#r-run').value.trim();
+  if (!run) return toast('Command required', null);
+  try {
+    DATA = await api('/api/automation/save', {
+      column: $('#r-col').value,
+      trigger: $('#r-trigger').value,
+      name: $('#r-name').value.trim(),
+      run,
+      instruction: $('#r-inst').value.trim(),
+      background: $('#r-bg').checked,
+      capture_session: $('#r-cap').checked,
+      orig: editingRule,
+    });
+    render();
+    closeRuleModal();
+    toast('Automation saved', 'Written to board.yml.');
+  } catch (err) { toast('Save failed', err.message); }
+});
+$('#r-delete').addEventListener('click', async () => {
+  if (!editingRule || !confirm('Delete this automation?')) return;
+  try {
+    DATA = await api('/api/automation/delete', editingRule);
+    render();
+    closeRuleModal();
+    toast('Automation deleted', 'Removed from board.yml.');
+  } catch (err) { toast('Delete failed', err.message); }
+});
+
+/* ---------- connector setup modal ---------- */
+let connModalId = null;
+
+async function connectorSetup(id, env) {
+  try {
+    const res = await fetch('/api/connectors/setup', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, env }),
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function openConnModal(c, prior) {
+  connModalId = c.id;
+  $('#c-heading').textContent = `Connect ${c.title}`;
+  $('#c-desc').textContent = c.description || '';
+  const needed = prior?.missing?.length ? prior.missing : (c.needs_env || []);
+  $('#c-env').innerHTML = needed.map((k) =>
+    `<input data-env="${esc(k)}" type="${/TOKEN|SECRET|KEY|PASSWORD/i.test(k) ? 'password' : 'text'}"
+       placeholder="${esc(k)}" autocomplete="off" spellcheck="false" />`).join('');
+  $('#c-inst').textContent = c.instructions || '';
+  $('#c-err').textContent = '';
+  // manual tiles (no setup command) are instructions-only
+  $('#c-save').style.display = c.setup ? '' : 'none';
+  $('#c-cancel').textContent = c.setup ? 'Cancel' : 'Close';
+  $('#modal-conn').classList.add('open');
+  const first = $('#c-env input');
+  if (first) first.focus();
+}
+
+$('#c-cancel').addEventListener('click', () => $('#modal-conn').classList.remove('open'));
+$('#c-save').addEventListener('click', async () => {
+  const c = DATA.setup.connectors.find((x) => x.id === connModalId);
+  const env = {};
+  let empty = null;
+  $$('#c-env input').forEach((inp) => {
+    if (inp.value.trim()) env[inp.dataset.env] = inp.value.trim();
+    else empty ??= inp;
+  });
+  if (empty) { $('#c-err').textContent = `${empty.dataset.env} is required.`; empty.focus(); return; }
+  const btn = $('#c-save');
+  btn.disabled = true; btn.textContent = 'Connecting…';
+  const data = await connectorSetup(c.id, env);
+  btn.disabled = false; btn.textContent = 'Connect';
+  if (data.ok) {
+    $('#modal-conn').classList.remove('open');
+    DATA = data;
+    render();
+    toast(`${c.title} connected`, data.instructions || 'Tile is set up — it appears under Connected tools.', 9000);
+  } else if (data.missing) {
+    $('#c-err').textContent = `Still missing: ${data.missing.join(', ')}.`;
+  } else {
+    $('#c-err').textContent = `${data.error || 'setup failed'}${data.output ? ` — ${data.output}` : ''}`;
+  }
+});
+
 $('#btn-verify').addEventListener('click', async () => {
   const btn = $('#btn-verify');
   btn.disabled = true; btn.textContent = 'Verifying…';
@@ -989,7 +1791,7 @@ $('#btn-recheck').addEventListener('click', async () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeDrawer(); $$('.modal').forEach((m) => m.classList.remove('open')); }
+  if (e.key === 'Escape') { closeDrawer(); ruleReturnLane = null; $$('.modal').forEach((m) => m.classList.remove('open')); }
 });
 
 /* ---------- sidebar ---------- */
@@ -1012,6 +1814,19 @@ function renderSidebar() {
 
 function render() {
   if (!DATA) return;
+  const w = DATA.sync_watch;
+  const watchTxt = DATA.sync_every === 'off' || DATA.sync_every === false
+    ? 'PR watch off'
+    : w
+      ? `PR watch every ${esc(String(DATA.sync_every))} · last check ${ago(w.last_run)}${w.moved?.length ? ` · <b>moved ${w.moved.length}</b>` : ''}${w.errors ? ` · <span style="color:#b91c1c">${w.errors} errored</span>` : ''}`
+      : `PR watch every ${esc(String(DATA.sync_every))} · first check pending`;
+  const t = DATA.triage;
+  const triageTxt = t?.running ? ' · <span style="color:#c2410c">triage running…</span>'
+    : t?.last_run ? ` · triage: ${esc(t.last_summary ?? t.last_status)} (${ago(t.last_run)})` : '';
+  const jr = DATA.jira;
+  const jiraTxt = jr?.running ? ' · <span style="color:#c2410c">Jira syncing…</span>'
+    : jr?.last_run ? ` · Jira: ${esc(jr.last_summary ?? jr.last_status)} (${ago(jr.last_run)})` : '';
+  $('#watch-hint').innerHTML = watchTxt + triageTxt + jiraTxt;
   renderSidebar();
   renderBoard();
   renderActivity();
@@ -1027,6 +1842,15 @@ async function refresh() {
 }
 refresh();
 setInterval(() => { if (!openCardId && !document.querySelector('.modal.open')) refresh(); }, 12000);
+// while a pull or an agent run is in flight, poll fast so results land
+// promptly (each /api/board call also harvests finished background runs)
+setInterval(() => {
+  if (document.querySelector('.modal.open')) return;
+  const busy = DATA?.setup?.sources?.some((s) => s.pulling)
+    || DATA?.cards?.some((c) => c.pending_session_logs?.length || c.pending_enrich)
+    || DATA?.triage?.running || DATA?.jira?.running;
+  if (busy) refresh();
+}, 3000);
 </script>
 </body>
 </html>

@@ -34,7 +34,21 @@ atlassian: https://mcp.atlassian.com/v1/sse (SSE) - ✗ Failed to connect
   assert.equal(servers.gdrive, undefined);
 });
 
-test('checkConnectors: full picture from stubbed shell', () => {
+test('parseMcpList: mixed-case names, spaces, and needs-auth status', () => {
+  const out = `Checking MCP server health…
+
+Atlassian: https://mcp.atlassian.com/v1/mcp (HTTP) - ! Needs authentication
+claude.ai JIRA: https://mcp.atlassian.com/v1/sse - ✘ Failed to connect
+workspace-mcp: uvx workspace-mcp --tool-tier core - ✔ Connected
+`;
+  const servers = parseMcpList(out);
+  assert.equal(servers.atlassian.connected, false);
+  assert.equal(servers.atlassian.needs_auth, true);
+  assert.equal(servers['claude.ai jira'].connected, false);
+  assert.equal(servers['workspace-mcp'].connected, true);
+});
+
+test('checkConnectors: full picture from stubbed shell', async () => {
   const exec = (cmd) => {
     if (cmd.includes('--version')) return { status: 0, stdout: '2.1.0 (Claude Code)\n', stderr: '' };
     if (cmd.includes('mcp list')) {
@@ -43,7 +57,7 @@ test('checkConnectors: full picture from stubbed shell', () => {
     return { status: 1, stdout: '', stderr: '' };
   };
   const state = { connectors: { claude: { verified: '2026-07-08T00:00:00Z' } } };
-  const statuses = checkConnectors({ connectors: {} }, state, { exec });
+  const statuses = await checkConnectors({ connectors: {} }, state, { exec });
   assert.equal(statuses.claude.configured, true);
   assert.equal(statuses.claude.connected, true); // previously verified
   assert.equal(statuses.slack.connected, true);
@@ -53,9 +67,9 @@ test('checkConnectors: full picture from stubbed shell', () => {
   assert.match(statuses.gdrive.detail, /not registered/);
 });
 
-test('checkConnectors: claude CLI missing', () => {
+test('checkConnectors: claude CLI missing', async () => {
   const exec = () => ({ status: 127, stdout: '', stderr: 'not found' });
-  const statuses = checkConnectors({ connectors: {} }, {}, { exec });
+  const statuses = await checkConnectors({ connectors: {} }, {}, { exec });
   assert.equal(statuses.claude.configured, false);
   assert.match(statuses.slack.detail, /claude CLI not found/);
 });

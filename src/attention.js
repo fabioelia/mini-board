@@ -30,12 +30,10 @@ export function computeAttention(board, card, now = Date.now()) {
 
   reasons.push(...prAttention(board, card));
 
-  if (card.pending_session_logs?.length) {
-    reasons.push({
-      reason: `agent running or finished — ${card.pending_session_logs.length} log(s) pending session capture (run "mb sync" or "mb board")`,
-      source: 'agent',
-    });
-  }
+  // NOTE: a running agent (pending_session_logs) is deliberately NOT an
+  // attention reason — it's a status. Harvest happens automatically on every
+  // board/sync/web poll, and runs that go quiet time out into a visible log
+  // entry after 15m.
 
   return reasons;
 }

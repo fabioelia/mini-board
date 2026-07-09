@@ -21,6 +21,10 @@ import {
   resolveConnectors, checkConnectors, verifyClaude, missingEnv,
 } from './connectors.js';
 import { boardSources, runPull, harvestPulls } from './sources.js';
+import { runTriage, harvestTriage } from './triage.js';
+import { harvestEnrich } from './surface.js';
+import { applyFlow } from './flow.js';
+import { runJiraSync, harvestJiraSync } from './jira.js';
 
 const HELP = `mini-board — a tiny YAML-driven board for PRs, tickets, and Slack asks
 
@@ -49,6 +53,9 @@ Usage: mb <command> [args]
   mb sources                       list the board's sources and their last runs
   mb pull [source]                 run source prompt(s) through Claude; ingest JSON cards
        --bg --dry-run              background / just print the command
+  mb triage [--dry-run]            smart-place cards: an agent checks live PR/ticket
+                                   state and moves cards to the lane they belong in
+  mb jira [--dry-run]              mirror Jira: issues → cards, statuses → lanes
   mb sessions                      every Claude session across all cards
   mb flag <card> "reason"          manually mark a card as needing attention
   mb unflag <card>                 clear manual flags
@@ -112,15 +119,35 @@ function reportAction(res) {
 // Pick up anything background runs left behind: Claude session ids from agent
 // logs, and finished source pulls.
 function harvest(root, board, state) {
-  const sessions = harvestSessions(root, state);
+  const { found: sessions, completed } = harvestSessions(root, state);
+  const flowMoves = applyFlow(root, board, state, completed);
   const pulls = harvestPulls(root, board, state);
-  if (sessions || pulls.length) saveState(root, state);
+  const triage = harvestTriage(root, board, state);
+  const enriched = harvestEnrich(root, board, state);
+  const jira = harvestJiraSync(root, board, state);
+  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira) saveState(root, state);
+  if (jira) {
+    console.log(jira.ok ? paint.dim(`jira sync finished: ${jira.summary}`) : paint.red(`jira sync failed: ${jira.error}`));
+  }
+  for (const m of flowMoves) {
+    console.log(m.paused
+      ? paint.red(`flow: ${m.id} paused — ${m.reason}`)
+      : paint.dim(`flow: ${m.id} → ${m.to}`));
+  }
   for (const p of pulls) {
     console.log(
       p.ok
         ? paint.dim(`source "${p.source}" finished: ${p.summary}`)
         : paint.red(`source "${p.source}" failed: ${p.error}`),
     );
+  }
+  if (triage) {
+    console.log(triage.ok
+      ? paint.dim(`triage finished: ${triage.summary}`)
+      : paint.red(`triage failed: ${triage.error}`));
+    for (const m of triage.moved ?? []) {
+      console.log(paint.dim(`  ${m.id} → ${m.to}${m.reason ? ` (${m.reason})` : ''}`));
+    }
   }
 }
 
@@ -284,15 +311,15 @@ const commands = {
   },
   todo(...a) { return commands.attention(...a); },
 
-  sync(args, opts) {
+  async sync(args, opts) {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
     harvest(root, board, state);
     const syncOpts = { autoMove: !opts.no_move };
     const results = args[0]
-      ? [syncCard(board, state, requireCard(state, args[0]).id, syncOpts)]
-      : syncAll(board, state, syncOpts);
+      ? [await syncCard(board, state, requireCard(state, args[0]).id, syncOpts)]
+      : await syncAll(board, state, syncOpts);
     saveState(root, state);
     if (!results.length) { console.log('no cards with PR refs to sync'); return; }
     for (const r of results) {
@@ -373,7 +400,7 @@ const commands = {
     }
   },
 
-  connect(args, opts) {
+  async connect(args, opts) {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
@@ -386,12 +413,12 @@ const commands = {
 
       if (conn.id === 'claude' && opts.verify) {
         console.log('running a tiny headless claude call to verify auth…');
-        const res = verifyClaude();
+        const res = await verifyClaude();
         if (res.ok) {
           state.connectors ??= {};
           state.connectors.claude = { ...state.connectors.claude, verified: nowIso() };
           // re-probe so the stored status (connected/detail) reflects the verify
-          state.connectors = { ...state.connectors, ...checkConnectors(board, state) };
+          state.connectors = { ...state.connectors, ...(await checkConnectors(board, state)) };
           saveState(root, state);
           console.log(paint.bold('✓ Claude auth works') + paint.dim(` (session ${res.session ?? '?'})`));
         } else {
@@ -419,7 +446,7 @@ const commands = {
       // fall through to a re-check so the tile status is fresh
     }
 
-    const statuses = checkConnectors(board, state);
+    const statuses = await checkConnectors(board, state);
     state.connectors = { ...state.connectors, ...statuses };
     saveState(root, state);
     console.log(paint.bold('Connectors:'));
@@ -480,6 +507,37 @@ const commands = {
     saveState(root, state);
   },
 
+  triage(args, opts) {
+    const root = requireRoot();
+    const board = loadBoard(root);
+    const state = loadState(root);
+    harvest(root, board, state);
+    const res = runTriage(root, board, state, { dryRun: !!opts.dry_run });
+    saveState(root, state);
+    if (res.dryRun) {
+      console.log(paint.dim(`would triage ${res.candidates.length} card(s): ${res.candidates.join(', ')}`));
+      console.log(paint.dim(`  ${res.cmd.slice(0, 300)}…`));
+    } else if (res.empty) {
+      console.log(res.summary);
+    } else if (res.background) {
+      console.log(`triage running in background on ${res.candidates.length} card(s) ${paint.dim(`→ ${res.log} (finishes on next mb board)`)}`);
+    } else if (!res.ok) {
+      fail(res.error);
+    }
+  },
+
+  jira(args, opts) {
+    const root = requireRoot();
+    const board = loadBoard(root);
+    const state = loadState(root);
+    harvest(root, board, state);
+    const res = runJiraSync(root, board, state, { dryRun: !!opts.dry_run });
+    saveState(root, state);
+    if (res.dryRun) console.log(paint.dim(`would run: ${res.cmd.slice(0, 300)}…`));
+    else if (res.background) console.log(`jira sync running in background ${paint.dim(`→ ${res.log} (finishes on next mb board)`)}`);
+    else if (!res.ok) fail(res.error);
+  },
+
   sessions() {
     const root = requireRoot();
     const board = loadBoard(root);
@@ -520,7 +578,7 @@ if (!handler) {
   process.exit(1);
 }
 try {
-  handler(args, opts);
+  await handler(args, opts);
 } catch (err) {
   fail(err.message);
 }

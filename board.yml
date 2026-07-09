@@ -1,0 +1,195 @@
+# mini-board configuration — this file drives the board.
+# State (the cards) lives next door in state.yml; this file is yours to edit.
+
+board:
+  name: My Work
+  # Swimlanes: group cards into horizontal lanes by a field.
+  # "type" (pr / ticket / slack / task), "project", or "none".
+  group_by: type
+
+defaults:
+  # Lets PR refs be bare numbers ("--pr 1234") instead of full URLs.
+  repo: your-org/your-repo
+  # Prefix for non-URL ticket refs, used by `mb open <card> ticket`.
+  ticket_url: https://your-org.atlassian.net/browse/
+  # Default project for new cards (optional).
+  # project: main
+
+  # The lifecycle, left to right. Column knobs:
+  #   attention: true      -> every card here is always called out (triage columns)
+  #   stale_after: 4h      -> call out cards with no activity for this long (m/h/d/w)
+  #   on_enter / on_leave  -> shell commands fired when a card moves in/out.
+  #     Templates use {{card.id}} {{card.title}} {{card.pr}} {{card.ticket}}
+  #     {{card.slack}} {{card.session}} {{card.context}} {{prompt}} {{message}}
+  #     {{from}} {{to}}. Values are shell-escaped for you — do NOT add quotes.
+  #     The same values are exported as $MB_CARD_ID, $MB_PR, $MB_SESSION, ...
+  #     Options per action: background: true (don't block; log to .mini-board/logs)
+  #     and capture_session: true (harvest the Claude session_id from the output).
+columns:
+  - id: inbox
+    title: Inbox
+    attention: true # new asks always need triage
+  - id: build-context
+    title: Build Context
+    accent: "#a8a29a"
+    on_enter:
+      - name: Context Building
+        run: claude -p {{prompt}} --output-format stream-json --verbose
+          --permission-mode bypassPermissions
+        instruction: >-
+          Take a look at the ticket, research the task, look at recent slack
+          threads on the topic, recent code for the feature.
+
+
+          Come up with a few different approaches we can and / or should take
+          for testing this feature.
+        background: true
+        capture_session: true
+
+  - id: agent
+    title: Agent Working
+    stale_after: 4h # agent quiet for 4h? probably stuck
+    on_enter:
+      # Fire an agent with the card's full context the moment you drag it here.
+      - name: Start Work
+        run: claude -p {{prompt}} --output-format stream-json --verbose
+          --permission-mode bypassPermissions
+        instruction: Start working on the ticket, file a PR when ready
+        background: true
+        capture_session: true
+    on_done: waiting-pr # when the agent run completes, funnel the card here
+    max_visits: 2 # loop guard: 3rd entry parks the card in the paused lane
+    accent: "#ea580c"
+  - id: waiting-pr
+    title: Waiting on PR
+    stale_after: 24h # PR sitting untouched for a day
+
+  - id: follow-up
+    title: Needs Follow-up
+    attention: true # by definition: you owe it another round
+
+  - id: review
+    title: In Review
+    jira_status: In Review
+
+  - id: merged
+    title: Merged · Verify
+    stale_after: 3d # merged but unverified for 3 days
+    # on_enter:
+    #   - run: ./scripts/run-e2e.sh {{card.pr}}
+    #     background: true
+
+  - id: paused
+    title: Paused
+    attention: true # loop-guarded cards land here and need a human unblock
+
+  - id: done
+    title: Done
+
+# Pipelines: a lane with `on_done: <lane>` funnels its cards onward when the
+# lane's agent run completes (the target lane's automations fire — lanes
+# chain). `max_visits` (per lane or the default here) is the loop guard: a
+# card that would re-enter a lane too many times is parked in `paused`.
+flow:
+  paused: paused
+  max_visits: 2
+
+# `mb sync` pulls live PR state via the gh CLI and can move cards for you.
+# While `mb web` runs, a watcher re-syncs on this interval and applies the
+# auto_move rules — approved PRs surface for your attention on their own.
+sync:
+  every: 5m # 5m/30m/1h… or "off" to only sync manually
+  auto_move:
+    pr_merged: merged
+    pr_closed: done
+    pr_approved: follow-up # approved + ready → needs you
+    # pr_changes_requested: follow-up
+    # pr_checks_failing: agent  # failing CI → the agent lane fires remediation on_enter
+
+    # Triage — the board's intelligence layer (the Triage button / `mb triage`).
+    # An agent inspects cards in the lanes below, cross-references live state
+    # with its tools (does this ask already have a PR? is the ticket in review?),
+    # fills in missing refs, and moves each card to the lane it truly belongs in.
+    # Every move logs its reason on the card. Deterministic PR-state moves are
+    # handled by sync.auto_move above; triage covers what needs judgment.
+triage:
+  columns: [ inbox ] # lanes whose cards get triaged
+  tools: [ github, atlassian, slack ]
+  # instruction: extra guidance, e.g. "cards about infra go to the infra lane"
+
+  # Jira mirror — makes Jira the source of truth for lanes and tickets.
+  # THE mapping lives on the lanes: give a column `jira_status: "In Review"`
+  # and Jira sync (the Jira panel / `mb jira`) moves issues with that status
+  # into that lane, creating cards for issues the board hasn't seen. With
+  # push_moves, dragging a card into a mapped lane transitions the issue.
+  # jira:
+  #   project: NP
+  #   jql: assignee = currentUser() AND statusCategory != Done
+  #   push_moves: true
+
+  # Card surface — what a card's details look like. Refs always link
+  # deterministically (PR URL, defaults.ticket_url + key, Slack permalink).
+  # "Refresh details" in the card drawer runs an agent that fetches live state
+  # for the refs and writes a summary, key facts, and links onto the card.
+surface:
+  tools:
+    - github
+    - atlassian
+    - slack
+  instruction: >-
+    If there is a PR reference include a PR link, and any failed status checks
+
+    If there is a JIRA ticket referenced include a link to JIRA (sample link
+    https://newtonresearch.atlassian.net/browse/NP-7009)
+
+    If there is a slack reference include the link to jump to the thread.
+
+    If there is a link to a claude session referenced surface that as a link as
+    well
+
+
+    Sometimes we have multiple references, create links for each
+actions:
+  # `mb comment <card> "..." --fire` → resumes the card's latest Claude session.
+  fire_comment:
+    run: claude --resume {{card.session}} -p {{message}} --output-format stream-json
+      --verbose --permission-mode bypassPermissions
+    background: true
+    capture_session: true
+  # `mb agent <card> ["instruction"]` → brand-new Claude session, full card context.
+  new_agent:
+    run: claude -p {{prompt}} --output-format stream-json --verbose
+      --permission-mode bypassPermissions
+    background: true
+    capture_session: true
+  # Ideas:
+  # notify_slack:
+  #   run: curl -s -X POST $SLACK_WEBHOOK -d "{\"text\": $MB_MESSAGE}"
+sources:
+  - id: pr-s
+    title: PR's
+    prompt: Look at the open PR's where fabio is the author focus only on the newton
+      repository
+    tools:
+      - github
+    column: inbox
+  - id: slack-source
+    title: Slack Source
+    prompt: >-
+      Search for messages in the last 24hrs in the #user-feedback #dev-qa and
+      #newton-ui channels. 
+
+      For every unique bug there we should create a ticket on our board.
+
+      We should check if there were other recent reportings for this bug over
+      the past few weeks and join the context together as well as links to
+      discussions
+    tools:
+      - slack
+    column: inbox
+jira:
+  project: NP
+  push_moves: true
+  lanes_from_jira: true
+  comments: true
+  labels: true

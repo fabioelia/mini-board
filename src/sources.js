@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createCard, ensureLogDir, logEntry } from './store.js';
-import { nowIso, shellQuote } from './util.js';
+import { nowIso, shellQuote, claudeFlags } from './util.js';
 
 const PULL_TIMEOUT_MS = 15 * 60_000; // background pulls older than this are marked failed
 
@@ -83,16 +83,20 @@ export function buildPullPrompt(board, state, source) {
     'Respond with ONLY a JSON object — no prose, no markdown fences — exactly matching this shape:',
     CARDS_SCHEMA,
     '',
-    'Rules: one card per actionable item; set every ref you can; dedupe_key must be stable so re-runs do not duplicate. If there is nothing new, respond with {"cards": []}.',
+    'Rules: one card per actionable item; set every ref you can. dedupe_key must be the item\'s canonical identifier — PR URL, ticket key, Slack message ts — never a paraphrase, so re-runs produce the identical key. Only invent a key when the item truly has no identifier. If there is nothing new, respond with {"cards": []}.',
   ].join('\n');
 }
 
-export function buildPullCommand(source, prompt) {
-  let cmd = `claude -p ${shellQuote(prompt)} --output-format json`;
+export function buildPullCommand(source, prompt, board = {}) {
+  // stream-json so the log fills with events AS the pull runs — the activity
+  // feed reads it live; the final "result" event carries the cards JSON.
+  // bypassPermissions because these runs are non-interactive: there is nobody
+  // to answer a permission prompt, so MCP/tool calls would block forever.
+  let cmd = `claude -p ${shellQuote(prompt)} --output-format stream-json --verbose --permission-mode bypassPermissions`;
   const allow = toolAllowList(source.tools);
   if (allow.length) cmd += ` --allowedTools ${shellQuote(allow.join(','))}`;
   if (source.claude_args) cmd += ` ${source.claude_args}`;
-  return cmd;
+  return cmd + claudeFlags(board, cmd);
 }
 
 // claude -p --output-format json prints one JSON object on stdout (possibly
@@ -105,7 +109,10 @@ export function extractResultJson(text) {
     if (!line.startsWith('{')) continue;
     try {
       const obj = JSON.parse(line);
-      if (obj && typeof obj === 'object' && typeof obj.result === 'string') return obj;
+      // plain json: the object with a string result. stream-json: the
+      // "result" event (which may lack .result on execution errors — return
+      // it anyway so the run fails fast instead of waiting for the timeout).
+      if (obj && typeof obj === 'object' && (typeof obj.result === 'string' || obj.type === 'result')) return obj;
     } catch { /* keep scanning */ }
   }
   return null;
@@ -139,21 +146,32 @@ export function parseCards(resultText) {
   return { cards, dropped, invalid: false };
 }
 
+// Normalize a dedupe key or ref for comparison: whitespace-collapsed,
+// case-insensitive, trailing-slash-insensitive. Values are STORED as given —
+// this only decides equality, so cosmetic drift between runs (case, trailing
+// "/", double spaces) can't mint a duplicate card.
+export function normKey(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ').replace(/\/+$/, '').toLowerCase();
+}
+
 // Create cards from a parsed pull, skipping anything already on the board.
+// Duplicate = same origin key for this source (archived included, so pulls
+// never resurrect dismissed items), or any ref matching an existing card's.
 export function ingestCards(board, state, source, items) {
   const created = [];
   let skipped = 0;
+  const originKeys = new Set();
+  const refKeys = new Set();
+  const index = (card) => {
+    if (card.origin?.source === source.id) originKeys.add(normKey(card.origin.key));
+    for (const r of [card.refs?.pr, card.refs?.ticket, card.refs?.slack]) {
+      if (r) refKeys.add(normKey(r));
+    }
+  };
+  Object.values(state.cards).forEach(index);
   for (const item of items) {
-    const dupByOrigin = Object.values(state.cards).some(
-      (c) => c.origin?.source === source.id && c.origin?.key === item.dedupe_key,
-    );
-    const dupByRef = Object.values(state.cards).some(
-      (c) =>
-        !c.archived &&
-        ((item.pr && c.refs?.pr === item.pr) ||
-          (item.ticket && c.refs?.ticket === item.ticket) ||
-          (item.slack && c.refs?.slack === item.slack)),
-    );
+    const dupByOrigin = originKeys.has(normKey(item.dedupe_key));
+    const dupByRef = [item.pr, item.ticket, item.slack].some((r) => r && refKeys.has(normKey(r)));
     if (dupByOrigin || dupByRef) { skipped++; continue; }
     const { id, card } = createCard(board, state, {
       title: item.title,
@@ -167,6 +185,7 @@ export function ingestCards(board, state, source, items) {
     card.origin = { source: source.id, key: item.dedupe_key };
     logEntry(card, 'source', `pulled by source "${source.id}"`);
     created.push(id);
+    index(card); // so a second item in this same batch with the same key/ref is skipped
   }
   return { created, skipped };
 }
@@ -176,15 +195,65 @@ function recordRun(state, source, patch) {
   state.sources[source.id] = { ...state.sources[source.id], ...patch };
 }
 
-function finishPull(board, state, source, stdout) {
+const HISTORY_CAP = 20;
+
+// Prepend a finished run to the source's history (newest first, capped).
+function recordHistory(state, source, entry) {
+  state.sources ??= {};
+  const s = (state.sources[source.id] ??= {});
+  s.history = [entry, ...(s.history ?? [])].slice(0, HISTORY_CAP);
+}
+
+// Turn a stream-json pull log into a human-readable event feed for debugging:
+// what session started, which tools ran with what input, what the model said,
+// and how the run ended (duration/turns/cost).
+export function parsePullActivity(text) {
+  const events = [];
+  for (const line of String(text ?? '').split('\n')) {
+    const t = line.trim();
+    if (!t.startsWith('{')) continue;
+    let obj;
+    try { obj = JSON.parse(t); } catch { continue; }
+    if (obj.type === 'system' && obj.subtype === 'init') {
+      events.push({ kind: 'init', text: `session started · ${obj.model ?? '?'} · ${(obj.tools ?? []).length} tools` });
+    } else if (obj.type === 'assistant') {
+      for (const block of obj.message?.content ?? []) {
+        if (block.type === 'tool_use') {
+          const input = JSON.stringify(block.input ?? {});
+          events.push({ kind: 'tool', text: `${block.name} ${input.length > 160 ? `${input.slice(0, 160)}…` : input}` });
+        } else if (block.type === 'text' && block.text?.trim()) {
+          events.push({ kind: 'text', text: block.text.trim().slice(0, 240) });
+        }
+      }
+    } else if (obj.type === 'user') {
+      for (const block of obj.message?.content ?? []) {
+        if (block.type === 'tool_result') {
+          const size = JSON.stringify(block.content ?? '').length;
+          events.push({ kind: 'tool_result', text: `↳ ${block.is_error ? 'TOOL ERROR' : 'result'} (${size} chars)` });
+        }
+      }
+    } else if (obj.type === 'result') {
+      const secs = obj.duration_ms ? `${Math.round(obj.duration_ms / 1000)}s` : '?';
+      const cost = obj.total_cost_usd != null ? ` · $${Number(obj.total_cost_usd).toFixed(3)}` : '';
+      events.push({ kind: 'result', text: `finished in ${secs} · ${obj.num_turns ?? '?'} turns${cost}${obj.is_error ? ' · ERROR' : ''}` });
+    }
+  }
+  return events;
+}
+
+function finishPull(board, state, source, stdout, meta = {}) {
+  const base = { started: meta.started ?? null, finished: nowIso(), log: meta.log ?? null };
+  if (meta.log) recordRun(state, source, { last_log: meta.log });
   const obj = extractResultJson(stdout);
   if (!obj) {
     recordRun(state, source, { last_run: nowIso(), last_status: 'error', last_summary: 'no parseable claude output' });
+    recordHistory(state, source, { ...base, status: 'error', summary: 'no parseable claude output' });
     return { source: source.id, ok: false, error: 'no parseable claude output', tail: String(stdout).slice(-400) };
   }
   const { cards, dropped, invalid } = parseCards(obj.result);
   if (invalid) {
     recordRun(state, source, { last_run: nowIso(), last_status: 'error', last_summary: 'response was not the cards JSON shape' });
+    recordHistory(state, source, { ...base, status: 'error', summary: 'response was not the cards JSON shape', session: obj.session_id ?? null });
     return { source: source.id, ok: false, error: 'response was not the cards JSON shape', tail: String(obj.result).slice(0, 400) };
   }
   const { created, skipped } = ingestCards(board, state, source, cards);
@@ -192,6 +261,10 @@ function finishPull(board, state, source, stdout) {
   recordRun(state, source, {
     last_run: nowIso(), last_status: 'ok', last_summary: summary,
     ...(obj.session_id ? { last_session: obj.session_id } : {}),
+  });
+  recordHistory(state, source, {
+    ...base, status: 'ok', summary, created: created.length, skipped,
+    session: obj.session_id ?? null,
   });
   return { source: source.id, ok: true, created, skipped, dropped, summary, session: obj.session_id ?? null };
 }
@@ -202,9 +275,12 @@ export function runPull(root, board, state, sourceId, opts = {}) {
   const source = getSource(board, sourceId);
   if (!source) return { source: sourceId, ok: false, error: `no source "${sourceId}" in board.yml` };
   if (!source.prompt.trim()) return { source: sourceId, ok: false, error: 'source has no prompt' };
+  if ((state.pending_pulls ?? []).some((p) => p.source === source.id)) {
+    return { source: sourceId, ok: false, error: 'a pull for this source is already running' };
+  }
 
   const prompt = buildPullPrompt(board, state, source);
-  const cmd = buildPullCommand(source, prompt);
+  const cmd = buildPullCommand(source, prompt, board);
   if (opts.dryRun) return { source: sourceId, ok: true, dryRun: true, cmd };
 
   if (opts.background) {
@@ -221,13 +297,15 @@ export function runPull(root, board, state, sourceId, opts = {}) {
     return { source: source.id, ok: true, background: true, log: logFile };
   }
 
+  const started = nowIso();
   const exec = opts.exec ?? ((c) => spawnSync('/bin/sh', ['-c', c], { encoding: 'utf8', cwd: root, timeout: PULL_TIMEOUT_MS }));
   const res = exec(cmd);
   if (res.status !== 0 && !extractResultJson(res.stdout)) {
     recordRun(state, source, { last_run: nowIso(), last_status: 'error', last_summary: `claude exited ${res.status}` });
+    recordHistory(state, source, { started, finished: nowIso(), log: null, status: 'error', summary: `claude exited ${res.status}` });
     return { source: source.id, ok: false, error: `claude exited ${res.status}`, tail: `${res.stdout ?? ''}${res.stderr ?? ''}`.slice(-400) };
   }
-  return finishPull(board, state, source, res.stdout);
+  return finishPull(board, state, source, res.stdout, { started });
 }
 
 // Complete any background pulls whose output has landed. Returns finished runs.
@@ -241,9 +319,10 @@ export function harvestPulls(root, board, state, now = Date.now()) {
     try { text = fs.readFileSync(path.join(root, pending.log), 'utf8'); } catch { /* gone */ }
     if (!source || text === null) continue; // source removed or log vanished — drop
     if (extractResultJson(text)) {
-      finished.push(finishPull(board, state, source, text));
+      finished.push(finishPull(board, state, source, text, { started: pending.started, log: pending.log }));
     } else if (now - Date.parse(pending.started) > PULL_TIMEOUT_MS) {
       recordRun(state, source, { last_run: nowIso(), last_status: 'error', last_summary: 'pull timed out or produced no output' });
+      recordHistory(state, source, { started: pending.started, finished: nowIso(), log: pending.log, status: 'error', summary: 'pull timed out or produced no output' });
       finished.push({ source: source.id, ok: false, error: 'pull timed out or produced no output', tail: text.slice(-400) });
     } else {
       remaining.push(pending);

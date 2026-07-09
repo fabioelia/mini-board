@@ -1,0 +1,1348 @@
+next_id: 19
+cards:
+  mb-1:
+    title: Land super-admin conversation export/import for testing
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1570
+      ticket: null
+      slack: https://newton-research.slack.com/archives/D098E9EU249/p1782258267225039?thread_ts=1782258267.225039&cid=D098E9EU249
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T15:05:36.732Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1570 on Newton-Research-Inc/newton: feat(conversation) adding super-admin export/import of conversations for testing."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:09.445Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: PR #1570 is an open draft (only a bot comment so far) — work is out as a PR, waiting on it → "waiting-pr"'
+      - at: 2026-07-08T13:49:52.373Z
+        kind: update
+        text: "details refreshed: Draft PR #1570 by fabioelia adds super-admin-only conversation export/import: it packages a conversation into a portable"
+      - at: 2026-07-08T14:40:37.052Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=pending"
+      - at: 2026-07-08T15:05:36.732Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1570
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1570
+      pr_title: "feat(conversation): add super-admin conversation export/import for testing"
+      pr_updated: 2026-07-08T15:03:46Z
+      checked: 2026-07-08T15:20:36.583Z
+    surface:
+      summary: "Draft PR #1570 by fabioelia adds super-admin-only conversation export/import: it packages a conversation into a portable .newton bundle (secrets always redacted, connector data optionally obfuscated) and re-imports it with fresh IDs, via four IsNewtonAdmin-gated API actions plus export/import wizard modals. CI is fully green — all 18 checks pass and the Playwright suite passed (388 tests, 1 flaky retry) against the deployed pr-1570 preview env — but it is still a draft with no human review yet (review required). Last activity was Jul 8, 2026 ~00:39 UTC when the Playwright gate went green; next"
+      facts:
+        Status: Open (draft)
+        Review: Required — no human review yet
+        Checks: All 18 passing
+        Playwright: 388 passed, 1 flaky (retried), 90 skipped
+        Mergeable: "Yes (base: develop)"
+        Author: fabioelia
+        Jira: No ticket linked
+        Last activity: 2026-07-08 00:39 UTC
+      links:
+        - label: "PR #1570"
+          url: https://github.com/Newton-Research-Inc/newton/pull/1570
+        - label: Preview env (pr-1570)
+          url: https://pr-1570.preview.newtonresearch.ai
+        - label: Playwright HTML report
+          url: https://newton:playwright@reports.preview.newtonresearch.ai/github/pr-1570/28907812561/playwright-report/index.html
+        - label: CI run (Backend Test)
+          url: https://github.com/Newton-Research-Inc/newton/actions/runs/28907812541
+        - label: Slack thread
+          url: https://newton-research.slack.com/archives/D098E9EU249/p1782258267225039?thread_ts=1782258267.225039&cid=D098E9EU249
+      updated: 2026-07-08T13:49:52.373Z
+  mb-2:
+    title: Ship experian polling notifications hotfix (tracking)
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1568
+      ticket: NP-8179
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:40:17.709Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open tracking hotfix PR #1568 for Experian polling notifications, covering NP-8179 and NP-9391."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:10.095Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: Tracking hotfix PR #1568 is an open draft; NP-8179 and NP-9391 are both In Code Review in Jira → "waiting-pr"'
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1568
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1568
+      pr_title: "hotfix(experian): [NP-8179][NP-9391] polling notifications hotfix (tracking)"
+      pr_updated: 2026-07-08T00:15:30Z
+      checked: 2026-07-08T15:20:37.504Z
+  mb-3:
+    title: Fix blueprint step actions blocked after cancel
+    type: pr
+    column: review
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1561
+      ticket: NP-9449
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:00.103Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1561: fix(blueprint) [NP-9449] unblock step actions after cancel."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:10.805Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+      - at: 2026-07-08T13:38:05.248Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → review
+        from: inbox
+        to: review
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: PR #1561 is open, non-draft, awaiting review, and NP-9449 is In Code Review in Jira → "review"'
+      - at: 2026-07-08T13:43:00.103Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1561
+    pr_state:
+      state: OPEN
+      draft: false
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1561
+      pr_title: "fix(blueprint): [NP-9449] unblock step actions after cancel"
+      pr_updated: 2026-07-07T21:47:46Z
+      checked: 2026-07-08T15:20:38.355Z
+  mb-4:
+    title: Land LLM cassette record/replay + dev-token seed auth for e2e
+    type: pr
+    column: follow-up
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1559
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T15:15:39.070Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1559: perf(e2e) LLM cassette record/replay and dev-token seed auth for automation runs."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:12.064Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=failing"
+      - at: 2026-07-08T13:29:13.248Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=pending"
+      - at: 2026-07-08T13:38:06.096Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=pending"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → follow-up
+        from: inbox
+        to: follow-up
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: PR #1559 is APPROVED (sdbnewton) but still a draft — needs the human to mark ready and merge → "follow-up"'
+      - at: 2026-07-08T13:43:00.795Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=pending"
+      - at: 2026-07-08T14:45:40.825Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=failing"
+      - at: 2026-07-08T14:50:39.072Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=pending"
+      - at: 2026-07-08T15:15:39.070Z
+        kind: sync
+        text: "PR is now: open, draft, review=approved, checks=failing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1559
+    pr_state:
+      state: OPEN
+      draft: true
+      review: APPROVED
+      mergeable: MERGEABLE
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1559
+      pr_title: "perf(e2e): LLM cassette record/replay + dev-token seed auth for automation runs"
+      pr_updated: 2026-07-08T15:15:03Z
+      checked: 2026-07-08T15:20:39.164Z
+  mb-5:
+    title: Ship specialist .routine.md data layer + scheduling
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1551
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:01.440Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1551: feat(specialist) [routines] .routine.md data layer, scheduling, and project context store."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:12.741Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:38:06.835Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: PR #1551 is an open draft with no reviews yet — waiting on the PR, not intake → "waiting-pr"'
+      - at: 2026-07-08T13:43:01.440Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1551
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: passing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1551
+      pr_title: "feat(specialist): [routines] .routine.md data layer, scheduling, and project context store"
+      pr_updated: 2026-07-07T18:08:17Z
+      checked: 2026-07-08T15:20:39.915Z
+  mb-6:
+    title: Fix inline display-object refs when duplicating conversations
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1545
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:02.201Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1545: fix(discourse) repoint inline display-object references when duplicating a conversation."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:13.411Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:38:07.628Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: PR #1545 is an open draft with no reviews yet — waiting on the PR, not intake → "waiting-pr"'
+      - at: 2026-07-08T13:43:02.201Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1545
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: passing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1545
+      pr_title: "fix(discourse): repoint inline display-object references when duplicating a conversation"
+      pr_updated: 2026-07-07T16:32:44Z
+      checked: 2026-07-08T15:20:40.765Z
+  mb-7:
+    title: Add fenced/inline code support to analyst response formatting
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1544
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:40:17.709Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1544: feat(analyst) support fenced code blocks and inline code in response formatting prompt."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:14.179Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.709Z
+        kind: triage
+        text: 'triage: PR #1544 is an open draft with no reviews yet — waiting on the PR, not intake → "waiting-pr"'
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1544
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1544
+      pr_title: "feat(analyst): support fenced code blocks and inline code in response formatting prompt"
+      pr_updated: 2026-07-07T22:15:36Z
+      checked: 2026-07-08T15:20:41.655Z
+  mb-8:
+    title: Land agent MCP bearer on PR previews + /preview-mcp-test workflow
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1524
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:03.608Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1524: feat(preview) agent MCP bearer auth on PR previews plus a /preview-mcp-test workflow."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:14.908Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T11:52:50.777Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:38:09.099Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:40:17.709Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.710Z
+        kind: triage
+        text: 'triage: PR #1524 is an open draft with no reviews yet — waiting on the PR, not intake → "waiting-pr"'
+      - at: 2026-07-08T13:43:03.608Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1524
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: passing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1524
+      pr_title: "feat(preview): agent MCP bearer on PR previews + /preview-mcp-test workflow"
+      pr_updated: 2026-07-06T23:35:13Z
+      checked: 2026-07-08T15:20:42.421Z
+  mb-9:
+    title: Ship parallel sub-conversations with auto-summary + drill-in UI
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1487
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:04.376Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1487: feat(conversations) launch parallel sub-conversations with auto-summary and drill-in UI."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:15.632Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T11:52:51.520Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing, conflicts"
+      - at: 2026-07-08T13:38:09.819Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing"
+      - at: 2026-07-08T13:40:17.710Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.710Z
+        kind: triage
+        text: 'triage: PR #1487 is an open draft with no reviews yet — waiting on the PR, not intake → "waiting-pr"'
+      - at: 2026-07-08T13:43:04.376Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=passing, conflicts"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1487
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: CONFLICTING
+      checks: passing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1487
+      pr_title: "feat(conversations): launch parallel sub-conversations with auto-summary and drill-in UI"
+      pr_updated: 2026-07-03T02:11:26Z
+      checked: 2026-07-08T15:20:43.168Z
+  mb-10:
+    title: Open digest follow-ups in homepage conversation sidepanel
+    type: pr
+    column: waiting-pr
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1486
+      ticket: null
+      slack: null
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:05.097Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1486: feat(home) open digest follow-ups in a homepage conversation sidepanel."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:16.273Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing"
+      - at: 2026-07-08T11:52:52.177Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing, conflicts"
+      - at: 2026-07-08T13:38:10.975Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing"
+      - at: 2026-07-08T13:40:17.710Z
+        kind: move
+        text: inbox → waiting-pr
+        from: inbox
+        to: waiting-pr
+      - at: 2026-07-08T13:40:17.710Z
+        kind: triage
+        text: 'triage: PR #1486 is an open draft with no reviews yet — waiting on the PR, not intake → "waiting-pr"'
+      - at: 2026-07-08T13:43:05.097Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing, conflicts"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1486
+    pr_state:
+      state: OPEN
+      draft: true
+      review: REVIEW_REQUIRED
+      mergeable: CONFLICTING
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1486
+      pr_title: "feat(home): open digest follow-ups in a homepage conversation sidepanel"
+      pr_updated: 2026-07-03T02:02:11Z
+      checked: 2026-07-08T15:20:43.869Z
+  mb-11:
+    title: "Land WCAG phases 2–3: AA contrast, prefs, /wcag gallery"
+    type: pr
+    column: build-context
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1465
+      ticket: NP-9381
+      slack: null
+    sessions:
+      - id: 53e55813-f7db-41c8-8808-ce1a45f0feba
+        label: captured from mb-11-1783517112888-Context Building.log
+        at: 2026-07-08T13:25:16.066Z
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T14:55:45.600Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #1465: feat(frontend) [NP-9381] WCAG phases 2–3 — AA contrast sign-off, high-contrast and large-target prefs, /wcag component gallery."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:16.910Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing, conflicts"
+      - at: 2026-07-08T13:25:12.887Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T13:25:12.890Z
+        kind: action
+        text: launched "Context Building" in background → .mini-board/logs/mb-11-1783517112888-Context Building.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-11: "Land WCAG phases 2–3: AA contrast, prefs, /wcag gallery" from My Work board.
+          Type: pr. Current column: build-context.
+          References: PR: https://github.com/Newton-Research-Inc/newton/pull/1465 · Ticket: NP-9381
+          PR state at last sync: OPEN, review=REVIEW_REQUIRED, checks=failing.
+          Recent activity:
+          - [2026-07-08T01:52:38.114Z] create: created in "inbox"
+          - [2026-07-08T01:52:38.114Z] comment: Open PR #1465: feat(frontend) [NP-9381] WCAG phases 2–3 — AA contrast sign-off, high-contrast and large-target prefs, /wcag component gallery.
+          - [2026-07-08T01:52:38.114Z] source: pulled by source "pr-s"
+          - [2026-07-08T11:47:16.910Z] sync: PR is now: open, draft, review=review_required, checks=failing, conflicts
+          - [2026-07-08T13:25:12.887Z] move: inbox → build-context
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format stream-json --verbose
+      - at: 2026-07-08T13:25:16.066Z
+        kind: session
+        text: attached Claude session 53e55813-f7db-41c8-8808-ce1a45f0feba (captured from mb-11-1783517112888-Context Building.log)
+      - at: 2026-07-08T13:27:10.059Z
+        kind: session
+        text: |-
+          Research done. Jira + Slack MCP servers both permission-blocked in this non-interactive session (Atlassian/slack tools need approval; claude.ai JIRA connector needs OAuth) — so ticket body and Slack threads unavailable. Worked from PR, CI logs, and the branch's `wcag-remediation.md` guide instead. Findings + testing options:
+
+          ## What the feature is (PR #1465, NP-9381)
+
+          Frontend-only WCAG phases 2–3 on top of merged phases 0–2 (#1415):
+          - **AA contrast retunes** of `--nri-color-*` tokens (both themes, hex + OKLCH mirrors), dark error-on-chip split, dark primary-button label pair.
+          - **Phase 2 AA**: reflow at 320px, session-timeout warning dialog, combobox ARIA on `CommandSearch`/mentions, icon-button name sweep, reduced motion.
+          - **Phase 3 opt-in prefs**: high-contrast mode + large control-size axis on `ThemeContext` (`data-contrast`, `--nri-target-min` 24→44px, antd seed scaling).
+          - **`/wcag` gallery**: live contrast verdicts on real `src/ui` components, color-picker overrides, design handoff export. Math shared via `src/utils/contrast.ts`.
+
+          ## Current state — blockers before any testing matters
+
+          - Draft, **merge conflicts** with `develop`.
+          - **prek fails**: 1 real eslint error — `jsx-a11y/control-has-associated-label` at `ConnectorTablesField.tsx:204` — plus type-check error same line (`TS2322`, bad props on a component). Looks like one un-grandfathered call site, likely from the develop side of a rebase.
+          - **Frontend Build and Test fails**: same TS2322.
+          - **Playwright: 8 failed.** Most relevant: **AC_22 theme-switching spec fails on the Preferences page** — the PR added Contrast/Control-size controls there, likely broke the spec's selectors. 3 failures are `[env-redeploy]` infra noise; the rest (BE_19, BLA_02/26, BV_NP-7437, BV_NP-7492) need triage — plausible suspects: the `role`/aria refactors on menus/cards changed locators, or larger targets shifted layout.
+
+          ## Testing approaches
+
+          Branch already has good unit coverage (ThemeContext, WcagPage, contrast utils, Ses
+      - at: 2026-07-08T13:38:11.799Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing"
+      - at: 2026-07-08T13:43:05.947Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing, conflicts"
+      - at: 2026-07-08T13:58:06.300Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=pending"
+      - at: 2026-07-08T14:25:44.498Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+      - at: 2026-07-08T14:30:44.497Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=pending"
+      - at: 2026-07-08T14:55:45.600Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=passing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/1465
+    pr_state:
+      state: OPEN
+      draft: false
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: passing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1465
+      pr_title: "feat(frontend): [NP-9381] WCAG phases 2–3 — AA contrast sign-off, high-contrast & large-target prefs, /wcag component gallery"
+      pr_updated: 2026-07-08T14:52:52Z
+      checked: 2026-07-08T15:20:44.747Z
+  mb-12:
+    title: Ship analytics click tracking
+    type: pr
+    column: agent
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/937
+      ticket: null
+      slack: null
+    sessions:
+      - id: 61ff2ba8-66cb-4f6c-954b-5fdfbe2b966c
+        label: captured from mb-12-1783511690606-claude -p.log
+        at: 2026-07-08T11:57:09.670Z
+    flags: []
+    archived: false
+    created: 2026-07-08T01:52:38.114Z
+    updated: 2026-07-08T13:43:06.679Z
+    log:
+      - at: 2026-07-08T01:52:38.114Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T01:52:38.114Z
+        kind: comment
+        text: "Open PR #937: feat analytics click tracking. Oldest open PR in the set — may be stale and worth closing or rebasing."
+      - at: 2026-07-08T01:52:38.114Z
+        kind: source
+        text: pulled by source "pr-s"
+      - at: 2026-07-08T11:47:17.555Z
+        kind: sync
+        text: "PR is now: open, draft, review=review_required, checks=failing, conflicts"
+      - at: 2026-07-08T11:54:50.606Z
+        kind: move
+        text: inbox → agent
+        from: inbox
+        to: agent
+      - at: 2026-07-08T11:54:50.609Z
+        kind: action
+        text: launched "claude -p" in background → .mini-board/logs/mb-12-1783511690606-claude -p.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-12: "Ship analytics click tracking" from My Work board.
+          Type: pr. Current column: agent.
+          References: PR: https://github.com/Newton-Research-Inc/newton/pull/937
+          PR state at last sync: OPEN, review=REVIEW_REQUIRED, checks=failing.
+          Recent activity:
+          - [2026-07-08T01:52:38.114Z] create: created in "inbox"
+          - [2026-07-08T01:52:38.114Z] comment: Open PR #937: feat analytics click tracking. Oldest open PR in the set — may be stale and worth closing or rebasing.
+          - [2026-07-08T01:52:38.114Z] source: pulled by source "pr-s"
+          - [2026-07-08T11:47:17.555Z] sync: PR is now: open, draft, review=review_required, checks=failing, conflicts
+          - [2026-07-08T11:54:50.606Z] move: inbox → agent
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format json
+      - at: 2026-07-08T11:57:09.670Z
+        kind: session
+        text: attached Claude session 61ff2ba8-66cb-4f6c-954b-5fdfbe2b966c (captured from mb-12-1783511690606-claude -p.log)
+      - at: 2026-07-08T12:01:07.213Z
+        kind: move
+        text: agent → inbox
+        from: agent
+        to: inbox
+      - at: 2026-07-08T12:01:15.117Z
+        kind: move
+        text: inbox → agent
+        from: inbox
+        to: agent
+      - at: 2026-07-08T12:01:15.120Z
+        kind: action
+        text: launched "Start Work" in background → .mini-board/logs/mb-12-1783512075118-Start Work.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-12: "Ship analytics click tracking" from My Work board.
+          Type: pr. Current column: agent.
+          References: PR: https://github.com/Newton-Research-Inc/newton/pull/937
+          PR state at last sync: OPEN, review=REVIEW_REQUIRED, checks=failing.
+          Recent activity:
+          - [2026-07-08T01:52:38.114Z] comment: Open PR #937: feat analytics click tracking. Oldest open PR in the set — may be stale and worth closing or rebasing.
+          - [2026-07-08T01:52:38.114Z] source: pulled by source "pr-s"
+          - [2026-07-08T11:47:17.555Z] sync: PR is now: open, draft, review=review_required, checks=failing, conflicts
+          - [2026-07-08T11:54:50.606Z] move: inbox → agent
+          - [2026-07-08T11:54:50.609Z] action: launched "claude -p" in background → .mini-board/logs/mb-12-1783511690606-claude -p.log
+          - [2026-07-08T11:57:09.670Z] session: attached Claude session 61ff2ba8-66cb-4f6c-954b-5fdfbe2b966c (captured from mb-12-1783511690606-claude -p.log)
+          - [2026-07-08T12:01:07.213Z] move: agent → inbox
+          - [2026-07-08T12:01:15.117Z] move: inbox → agent
+          Instruction: Start working on the ticket, file a PR when ready' --output-format json
+      - at: 2026-07-08T12:16:15.831Z
+        kind: action
+        text: "background run went quiet — no result after 15m (log: .mini-board/logs/mb-12-1783512075118-Start Work.log)"
+      - at: 2026-07-08T12:17:32.228Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=pending"
+      - at: 2026-07-08T13:18:02.923Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+      - at: 2026-07-08T13:38:12.630Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+      - at: 2026-07-08T13:43:06.679Z
+        kind: sync
+        text: "PR is now: open, review=review_required, checks=failing"
+    origin:
+      source: pr-s
+      key: https://github.com/Newton-Research-Inc/newton/pull/937
+    pr_state:
+      state: OPEN
+      draft: false
+      review: REVIEW_REQUIRED
+      mergeable: MERGEABLE
+      checks: failing
+      url: https://github.com/Newton-Research-Inc/newton/pull/937
+      pr_title: "feat: [NP-9473] analytics click tracking"
+      pr_updated: 2026-07-08T13:13:46Z
+      checked: 2026-07-08T15:20:45.505Z
+  mb-13:
+    title: Fix connector search-to-add flow in conversation connector picker
+    type: slack
+    column: build-context
+    project: null
+    refs:
+      pr: null
+      ticket: NP-9371
+      slack: https://newton-research.slack.com/archives/C07TPN9622U/p1783455545321229
+    sessions:
+      - id: a9298490-e2a6-4c65-81e6-d50abfeee6c5
+        label: captured from mb-13-1783520174672-Context Building.log
+        at: 2026-07-08T14:16:15.982Z
+    flags: []
+    archived: false
+    created: 2026-07-08T11:34:42.710Z
+    updated: 2026-07-08T14:21:30.394Z
+    log:
+      - at: 2026-07-08T11:34:42.710Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T11:34:42.711Z
+        kind: comment
+        text: Searching connections while adding connectors to a conversation navigates to the connector detail page instead of letting you add it directly. Reported independently by two users within a minute (loom.com/share/70d417b40268461bb266a34611a7d0c0, jam.dev/c/4583a00e-254a-46c2-988a-9ed455b74f9e); QA says a ticket exists and is slated for the current sprint — link it to this card.
+      - at: 2026-07-08T11:34:42.711Z
+        kind: source
+        text: pulled by source "slack-source"
+      - at: 2026-07-08T13:24:59.315Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T13:24:59.318Z
+        kind: action
+        text: launched "Context Building" in background → .mini-board/logs/mb-13-1783517099316-Context Building.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-13: "Fix connector search-to-add flow in conversation connector picker" from My Work board.
+          Type: slack. Current column: build-context.
+          References: Slack thread: https://newton-research.slack.com/archives/C07TPN9622U/p1783455545321229
+          Recent activity:
+          - [2026-07-08T11:34:42.710Z] create: created in "inbox"
+          - [2026-07-08T11:34:42.711Z] comment: Searching connections while adding connectors to a conversation navigates to the connector detail page instead of letting you add it directly. Reported independently by two users within a minute (loom.com/share/70d417b40268461bb266a34611a7d0c0, jam.dev/c/4583a00e-254a-46c2-988a-9ed455b74f9e); QA says a ticket exists and is slated for the current sprint — link it to this card.
+          - [2026-07-08T11:34:42.711Z] source: pulled by source "slack-source"
+          - [2026-07-08T13:24:59.315Z] move: inbox → build-context
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format stream-json --verbose
+      - at: 2026-07-08T14:16:08.226Z
+        kind: update
+        text: agent context reset — cleared 1 session(s), 2 session entries
+      - at: 2026-07-08T14:16:11.973Z
+        kind: move
+        text: build-context → inbox
+        from: build-context
+        to: inbox
+      - at: 2026-07-08T14:16:14.671Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T14:16:14.674Z
+        kind: action
+        text: launched "Context Building" in background → .mini-board/logs/mb-13-1783520174672-Context Building.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-13: "Fix connector search-to-add flow in conversation connector picker" from My Work board.
+          Type: slack. Current column: build-context.
+          References: Slack thread: https://newton-research.slack.com/archives/C07TPN9622U/p1783455545321229
+          Recent activity:
+          - [2026-07-08T11:34:42.710Z] create: created in "inbox"
+          - [2026-07-08T11:34:42.711Z] comment: Searching connections while adding connectors to a conversation navigates to the connector detail page instead of letting you add it directly. Reported independently by two users within a minute (loom.com/share/70d417b40268461bb266a34611a7d0c0, jam.dev/c/4583a00e-254a-46c2-988a-9ed455b74f9e); QA says a ticket exists and is slated for the current sprint — link it to this card.
+          - [2026-07-08T11:34:42.711Z] source: pulled by source "slack-source"
+          - [2026-07-08T13:24:59.315Z] move: inbox → build-context
+          - [2026-07-08T13:24:59.318Z] action: launched "Context Building" in background → .mini-board/logs/mb-13-1783517099316-Context Building.log
+          - [2026-07-08T14:16:08.226Z] update: agent context reset — cleared 1 session(s), 2 session entries
+          - [2026-07-08T14:16:11.973Z] move: build-context → inbox
+          - [2026-07-08T14:16:14.671Z] move: inbox → build-context
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format stream-json --verbose --permission-mode bypassPermissions
+      - at: 2026-07-08T14:16:15.982Z
+        kind: session
+        text: attached Claude session a9298490-e2a6-4c65-81e6-d50abfeee6c5 (captured from mb-13-1783520174672-Context Building.log)
+      - at: 2026-07-08T14:20:54.504Z
+        kind: update
+        text: ticket → NP-9371
+      - at: 2026-07-08T14:20:54.604Z
+        kind: comment
+        text: "Linked QA ticket NP-9371 ({SR_26} FILTERING&SEARCHING FIXES_2, item F2_03) — exact match: selecting a search result opens the object instead of selecting it; biggest impact when adding a connector to a conversation/blueprint. Root cause found in code: SelectExistingDatasourceModal inherits DataSourceList's default ConnectorSearch, whose onSelect calls useNavigateToConnector (ConnectorSearch.tsx:23-42) — navigates to /datasource/:id instead of adding to selection. Introduced by PR #1075 (NP-6901 unified entity filters), survived the #1286 regression sweep (merged [skip-e2e])."
+      - at: 2026-07-08T14:21:30.394Z
+        kind: session
+        text: |-
+          Done researching. Summary:
+
+          ## mb-13 — findings
+
+          **Root cause (confirmed in code).** `SelectExistingDatasourceModal` (Add-connector modal) embeds `DataSourceList` without `showAdvancedFilter={false}` and without custom `filterBar.customSearch`. So it inherits default search widget `ConnectorSearch`, whose `onSelect` calls `useNavigateToConnector` → `navigate('/datasource/${id}')` (`apps/frontend/src/components/datasource-list/ConnectorSearch.tsx:23-42`). Search result click navigates away; plain list click goes through `onSelectionChange` and adds correctly (`DataSourceList.tsx:167-205`). Behavior came in with PR #1075 (NP-6901 unified entity filters); survived regression-sweep PR #1286, which merged `[skip-e2e]`.
+
+          **QA ticket found + linked.** [NP-9371](https://newtonresearch.atlassian.net/browse/NP-9371) "{SR_26} FILTERING&SEARCHING FIXES_2", item **F2_03** — verbatim same bug ("selecting any object immediately opens it… biggest impact when adding a connector, breaks conversation and blueprint creation flows"). Card mb-13 now has `--ticket NP-9371` set plus research comment. Adjacent: NP-9396 (blueprint-input connector search incomplete results) is a sibling symptom in the same rework.
+
+          **Slack thread: blocked.** Slack MCP token lacks `channels:history` scope (`missing_scope` error) — can't read thread C07TPN9622U/p1783455545321229 or recent channel discussion. Reauthorize token with history scopes if thread context needed; card comment + Loom/Jam links + NP-9371 already cover the substance.
+
+          **Test-coverage gaps today.** `ConnectorSearch.test.tsx:193-206` *asserts navigate-on-select* — locks in the bug. `SelectExistingDatasourceModal.test.tsx` mocks `DataSourceList` entirely, so search path never exercised. Playwright only checks the search placeholder exists; never selects a result.
+
+          ## Testing approaches
+
+          1. **Modal-level Vitest integration test (highest value per cost).** Render real `SelectExistingDatasourceModal` with real `DataSourceList` + `ConnectorSearch
+    origin:
+      source: slack-source
+      key: "1783455545.321229"
+    lane_visits:
+      inbox: 1
+      build-context: 1
+  mb-14:
+    title: Fix adding connectors to blueprint inputs (NP-9371)
+    type: ticket
+    column: follow-up
+    project: null
+    refs:
+      pr: null
+      ticket: NP-9371
+      slack: https://newton-research.slack.com/archives/C07TPN9622U/p1783459437788799
+    sessions:
+      - id: d5206950-3f3e-49ee-8571-575d9b989c9f
+        label: captured from mb-14-1783512520718-Context Building.log
+        at: 2026-07-08T12:08:42.831Z
+    flags: []
+    archived: false
+    created: 2026-07-08T11:34:42.711Z
+    updated: 2026-07-08T13:40:17.710Z
+    log:
+      - at: 2026-07-08T11:34:42.711Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T11:34:42.711Z
+        kind: comment
+        text: "New report (loom.com/share/e1ce7dad10424081827149f1f310cba0) that connectors can't be added to blueprint inputs; QA confirms same issue Alina/Koh reported, tracked in NP-9371. Prior related reports: 07-01 blueprint-input connector search not returning all results (slack p1782870049071659, loom.com/share/e5ff9a2507cf4fe4809fadda5b8d3274) and 07-02 UserInteraction form showing 'click to upload a file' instead of 'attach connector' (slack p1783025657348059)."
+      - at: 2026-07-08T11:34:42.711Z
+        kind: source
+        text: pulled by source "slack-source"
+      - at: 2026-07-08T12:08:40.717Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T12:08:40.722Z
+        kind: action
+        text: launched "Context Building" in background → .mini-board/logs/mb-14-1783512520718-Context Building.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-14: "Fix adding connectors to blueprint inputs (NP-9371)" from My Work board.
+          Type: ticket. Current column: build-context.
+          References: Ticket: NP-9371 · Slack thread: https://newton-research.slack.com/archives/C07TPN9622U/p1783459437788799
+          Recent activity:
+          - [2026-07-08T11:34:42.711Z] create: created in "inbox"
+          - [2026-07-08T11:34:42.711Z] comment: New report (loom.com/share/e1ce7dad10424081827149f1f310cba0) that connectors can'\''t be added to blueprint inputs; QA confirms same issue Alina/Koh reported, tracked in NP-9371. Prior related reports: 07-01 blueprint-input connector search not returning all results (slack p1782870049071659, loom.com/share/e5ff9a2507cf4fe4809fadda5b8d3274) and 07-02 UserInteraction form showing '\''click to upload a file'\'' instead of '\''attach connector'\'' (slack p1783025657348059).
+          - [2026-07-08T11:34:42.711Z] source: pulled by source "slack-source"
+          - [2026-07-08T12:08:40.717Z] move: inbox → build-context
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format stream-json --verbose
+      - at: 2026-07-08T12:08:42.831Z
+        kind: session
+        text: attached Claude session d5206950-3f3e-49ee-8571-575d9b989c9f (captured from mb-14-1783512520718-Context Building.log)
+      - at: 2026-07-08T12:14:03.832Z
+        kind: session
+        text: |-
+          Research done. Slack thread fetch blocked — slack MCP permission not granted this session (also Atlassian/JIRA MCP unauthenticated, so no direct NP-9371 read). Worked from ticket comments + code. One big caveat: **both local checkouts are stale** — `nri-frontend` and `nri-server-2` have no commits after 2026-06-10 (demo branches), so July regression commit not findable locally. Need `git fetch` + develop/main checkout to confirm against live code.
+
+          ## What the feature is
+
+          "Add connector to blueprint input" = two-part flow:
+          - **Backend:** blueprint (Icebreaker) inputs collected at runtime via LLM-generated `userInteraction` form. Field type `connector_picker` (`newton/agent/tools/registry.py:307`). Selected connectors ride as `data_sources` ids → `message.data_sources.set()` (`discourse/models.py:975`).
+          - **Frontend:** `MessageInputForm.renderField` switches on server-sent `field.type` — `'file'` → Upload dropzone, `'connector_picker'` → `ConnectorPickerField` → `SelectExistingDatasourceModal` → `useFilterDataSources`.
+
+          ## Three concrete root-cause suspects found
+
+          1. **Connector search is client-side only.** `buildDataSourceFilters` (`nri-frontend/src/hooks/queries/useDataSources.ts:650-695`) never sends `search` to backend; search box filters only the ~600 already-loaded rows (`useFilteredEntities.tsx:17-24`). Matches 07-01 "search not returning all results" report. Backend side compounds it: `connector_type` param read as scalar but declared array (`memory/views.py:919-922`) — multi-value → empty `__in` → zero results; `sort=by_last_used` drops never-used connectors (`views.py:937`).
+          2. **File-upload instead of attach-connector = LLM prompt inconsistency.** Form fields are LLM-generated. `input_collector.py:158` prompt guideline omits `file`, but registry enum allows it — model can emit `type:'file'`, frontend has zero fallback/remap, renders Upload. Matches 07-02 report.
+          3. **No backend handler for `connector_picker` submissions.** `InputCollector._extract_structu
+      - at: 2026-07-08T13:24:43.475Z
+        kind: move
+        text: build-context → inbox
+        from: build-context
+        to: inbox
+      - at: 2026-07-08T13:40:17.710Z
+        kind: move
+        text: inbox → follow-up
+        from: inbox
+        to: follow-up
+      - at: 2026-07-08T13:40:17.710Z
+        kind: triage
+        text: 'triage: NP-9371 is In QA and assigned to Maximiliano Tortosa — fix already in flight elsewhere, so this awaits follow-up on QA outcome, not intake → "follow-up"'
+    origin:
+      source: slack-source
+      key: NP-9371
+  mb-15:
+    title: Fix duplicate plots/tables in Review Proposed Blueprint during step edit
+    type: slack
+    column: inbox
+    project: null
+    refs:
+      pr: null
+      ticket: null
+      slack: https://newton-research.slack.com/archives/C07TPN9622U/p1783466598007619
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T11:34:42.711Z
+    updated: 2026-07-08T11:34:42.711Z
+    log:
+      - at: 2026-07-08T11:34:42.711Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T11:34:42.711Z
+        kind: comment
+        text: QA found on Stage that editing a blueprint step shows duplicate plots and tables in the Review Proposed Blueprint form (jam.dev/c/d26ea260-4541-4b32-b96a-1bebcf958ec9, repro convo stage.newtonresearch.ai/project/38/conversations/13326). Likely a leftover of the 06-29 'duplicate charts/tables' symptom that three PRs fixed across chat, tables, and digests (slack p1782702797574899) — the blueprint step-edit review form wasn't covered.
+      - at: 2026-07-08T11:34:42.711Z
+        kind: source
+        text: pulled by source "slack-source"
+    origin:
+      source: slack-source
+      key: "1783466598.007619"
+  mb-16:
+    title: Investigate blueprint single-step SQL connector wrong result on re-run
+    type: slack
+    column: build-context
+    project: null
+    refs:
+      pr: null
+      ticket: null
+      slack: https://newton-research.slack.com/archives/C07TPN9622U/p1783467777539989
+    sessions:
+      - id: f3517ae3-d967-4339-b9f5-e636c9f0a07a
+        label: captured from mb-16-1783512003452-Context Building.log
+        at: 2026-07-08T12:07:17.771Z
+    flags: []
+    archived: false
+    created: 2026-07-08T11:34:42.711Z
+    updated: 2026-07-08T12:07:17.771Z
+    log:
+      - at: 2026-07-08T11:34:42.711Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T11:34:42.711Z
+        kind: comment
+        text: "Second issue from QA's Stage pass: a single-step blueprint against an attached SQL connector misbehaves after the connector Sync operation following the first run (repro convo stage.newtonresearch.ai/project/128/conversations/13307). Fabio suspects hardcoded single-connector SQL logic in the step; QA is filing a ticket — attach the key once created."
+      - at: 2026-07-08T11:34:42.711Z
+        kind: source
+        text: pulled by source "slack-source"
+      - at: 2026-07-08T11:59:33.624Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T11:59:58.803Z
+        kind: move
+        text: build-context → inbox
+        from: build-context
+        to: inbox
+      - at: 2026-07-08T12:00:03.451Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T12:00:03.455Z
+        kind: action
+        text: launched "Context Building" in background → .mini-board/logs/mb-16-1783512003452-Context Building.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-16: "Investigate blueprint single-step SQL connector wrong result on re-run" from My Work board.
+          Type: slack. Current column: build-context.
+          References: Slack thread: https://newton-research.slack.com/archives/C07TPN9622U/p1783467777539989
+          Recent activity:
+          - [2026-07-08T11:34:42.711Z] create: created in "inbox"
+          - [2026-07-08T11:34:42.711Z] comment: Second issue from QA'\''s Stage pass: a single-step blueprint against an attached SQL connector misbehaves after the connector Sync operation following the first run (repro convo stage.newtonresearch.ai/project/128/conversations/13307). Fabio suspects hardcoded single-connector SQL logic in the step; QA is filing a ticket — attach the key once created.
+          - [2026-07-08T11:34:42.711Z] source: pulled by source "slack-source"
+          - [2026-07-08T11:59:33.624Z] move: inbox → build-context
+          - [2026-07-08T11:59:58.803Z] move: build-context → inbox
+          - [2026-07-08T12:00:03.451Z] move: inbox → build-context
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format json
+      - at: 2026-07-08T12:07:17.771Z
+        kind: session
+        text: attached Claude session f3517ae3-d967-4339-b9f5-e636c9f0a07a (captured from mb-16-1783512003452-Context Building.log)
+    origin:
+      source: slack-source
+      key: "1783467777.539989"
+  mb-17:
+    title: Triage MCP 421 errors (NP-9428)
+    type: ticket
+    column: merged
+    project: null
+    refs:
+      pr: https://github.com/Newton-Research-Inc/newton/pull/1525
+      ticket: NP-9428
+      slack: https://newton-research.slack.com/archives/C07TPN9622U/p1783443914510119
+    sessions: []
+    flags: []
+    archived: false
+    created: 2026-07-08T11:34:42.711Z
+    updated: 2026-07-08T14:25:46.059Z
+    log:
+      - at: 2026-07-08T11:34:42.711Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T11:34:42.711Z
+        kind: comment
+        text: "Routed by daily triage in the last 24h; needs an owner. Discussion thread is in #dev-qa-automation."
+      - at: 2026-07-08T11:34:42.711Z
+        kind: source
+        text: pulled by source "slack-source"
+      - at: 2026-07-08T13:40:17.710Z
+        kind: move
+        text: inbox → merged
+        from: inbox
+        to: merged
+      - at: 2026-07-08T13:40:17.710Z
+        kind: triage
+        text: "triage: Fix PR #1525 for the MCP 421 issue is already MERGED and NP-9429 is In QA; NP-9428 was filed from that PR — verify, don't triage → \"merged\""
+      - at: 2026-07-08T13:43:07.603Z
+        kind: sync
+        text: "PR is now: merged, review=approved, checks=passing"
+      - at: 2026-07-08T14:21:25.929Z
+        kind: move
+        text: merged → done
+        from: merged
+        to: done
+      - at: 2026-07-08T14:25:46.059Z
+        kind: move
+        text: done → merged
+        from: done
+        to: merged
+      - at: 2026-07-08T14:25:46.059Z
+        kind: sync
+        text: auto-moved to "merged" (PR merged)
+    origin:
+      source: slack-source
+      key: NP-9428
+    pr_state:
+      state: MERGED
+      draft: false
+      review: APPROVED
+      mergeable: UNKNOWN
+      checks: passing
+      url: https://github.com/Newton-Research-Inc/newton/pull/1525
+      pr_title: "fix(deploy): [NP-9429] stop co-located MCP returning 421 on /mcp (loopback Host rewrite)"
+      pr_updated: 2026-07-07T01:00:03Z
+      checked: 2026-07-08T15:20:46.416Z
+    lane_visits:
+      done: 1
+      merged: 1
+  mb-18:
+    title: Decide on redundant 'what's next' section in auto-digests
+    type: task
+    column: agent
+    project: null
+    refs:
+      pr: null
+      ticket: null
+      slack: https://newton-research.slack.com/archives/C06EDUBB31T/p1783465236235269
+    sessions:
+      - id: 022cde33-40ab-4477-a88a-19b21a3b8f58
+        label: captured from mb-18-1783520471040-Context Building.log
+        at: 2026-07-08T14:21:12.378Z
+      - id: f2c1dbdc-a2b1-445b-954a-ea4aab8fb1a4
+        label: captured from mb-18-1783520924638-Start Work.log
+        at: 2026-07-08T14:29:00.449Z
+    flags: []
+    archived: false
+    created: 2026-07-08T11:34:42.711Z
+    updated: 2026-07-08T14:43:45.449Z
+    log:
+      - at: 2026-07-08T11:34:42.711Z
+        kind: create
+        text: created in "inbox"
+      - at: 2026-07-08T11:34:42.711Z
+        kind: comment
+        text: Digests now render a generated 'what's next' section with a Re-Run Blueprint button that duplicates the bottom 'What would you like to do next?' bar. Product (U04J106D881) is leaning toward removing the bottom section and keeping just the prompt box — needs a decision and follow-up.
+      - at: 2026-07-08T11:34:42.711Z
+        kind: source
+        text: pulled by source "slack-source"
+      - at: 2026-07-08T14:21:11.040Z
+        kind: move
+        text: inbox → build-context
+        from: inbox
+        to: build-context
+      - at: 2026-07-08T14:21:11.043Z
+        kind: action
+        text: launched "Context Building" in background → .mini-board/logs/mb-18-1783520471040-Context Building.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-18: "Decide on redundant '\''what'\''s next'\'' section in auto-digests" from My Work board.
+          Type: task. Current column: build-context.
+          References: Slack thread: https://newton-research.slack.com/archives/C06EDUBB31T/p1783465236235269
+          Recent activity:
+          - [2026-07-08T11:34:42.711Z] create: created in "inbox"
+          - [2026-07-08T11:34:42.711Z] comment: Digests now render a generated '\''what'\''s next'\'' section with a Re-Run Blueprint button that duplicates the bottom '\''What would you like to do next?'\'' bar. Product (U04J106D881) is leaning toward removing the bottom section and keeping just the prompt box — needs a decision and follow-up.
+          - [2026-07-08T11:34:42.711Z] source: pulled by source "slack-source"
+          - [2026-07-08T14:21:11.040Z] move: inbox → build-context
+          Instruction: Take a look at the ticket, research the task, look at recent slack threads on the topic, recent code for the feature.
+
+          Come up with a few different approaches we can and / or should take for testing this feature.' --output-format stream-json --verbose --permission-mode bypassPermissions
+      - at: 2026-07-08T14:21:12.378Z
+        kind: session
+        text: attached Claude session 022cde33-40ab-4477-a88a-19b21a3b8f58 (captured from mb-18-1783520471040-Context Building.log)
+      - at: 2026-07-08T14:23:42.753Z
+        kind: session
+        text: |-
+          Research done. Summary + testing approaches:
+
+          **Ticket context (mb-18).** Slack thread unreadable — Slack MCP token missing `channels:history` scope, only ticket comment available. Feature lives in Newton repo, not mini-board:
+
+          - Bottom bar = `DashboardFooter` (`apps/frontend/src/components/mdx/DashboardFooter.mdx.tsx`) — renders "What would you like to do next?" + `DigestButton` actions (`invoke_blueprint` / `new` / `redirect` types via `useActionButtonAction.ts`). Renders nothing when no actions.
+          - Digest MDX is LLM-generated server-side: design prompts in `apps/server/newton/agent/design/` (`prompts/guidance.md`, `mdx-catalog.json`). Catalog usage example literally tells model `label="What's next"` on DashboardFooter — so model sometimes also writes body `Section` titled "What's next" with Re-Run Blueprint `ActionButton`. Duplication is emergent model behavior, not one code bug.
+          - Server has validator hooks already: `agent/design/component_validator.py`, `mdx_compile_validator.py` — natural enforcement point.
+          - Product (per ticket) leans: drop bottom bar, keep prompt box only.
+
+          **Testing approaches — pick per layer, duplication spans prompt + render:**
+
+          1. **Deterministic validator tests (pytest, backend).** Extend `component_validator.py` to reject/strip second next-step affordance (body "What's next" section when `DashboardFooter` present — or `DashboardFooter` itself, if product removes it). Unit-test with fixture MDX. Cheapest, catches every generation regardless of model drift. Strongest option — enforcement, not hope.
+
+          2. **Prompt-eval regression (backend eval harness).** Newton already has eval commands (`apple/evaluation`, `eval_*` mgmt commands). Batch-generate digests from sample runs, assert ≤1 next-step affordance, track duplication rate before/after prompt/catalog edit. Validates guidance change actually works, not just that validator masks it.
+
+          3. **Frontend component tests (Vitest + Testing Library).** `DashboardFooter` render/no-render contract; `
+      - at: 2026-07-08T14:28:44.637Z
+        kind: move
+        text: build-context → agent
+        from: build-context
+        to: agent
+      - at: 2026-07-08T14:28:44.641Z
+        kind: action
+        text: launched "Start Work" in background → .mini-board/logs/mb-18-1783520924638-Start Work.log
+        cmd: |-
+          claude -p 'You are picking up work item mb-18: "Decide on redundant '\''what'\''s next'\'' section in auto-digests" from My Work board.
+          Type: task. Current column: agent.
+          References: Slack thread: https://newton-research.slack.com/archives/C06EDUBB31T/p1783465236235269
+          Recent activity:
+          - [2026-07-08T11:34:42.711Z] create: created in "inbox"
+          - [2026-07-08T11:34:42.711Z] comment: Digests now render a generated '\''what'\''s next'\'' section with a Re-Run Blueprint button that duplicates the bottom '\''What would you like to do next?'\'' bar. Product (U04J106D881) is leaning toward removing the bottom section and keeping just the prompt box — needs a decision and follow-up.
+          - [2026-07-08T11:34:42.711Z] source: pulled by source "slack-source"
+          - [2026-07-08T14:21:11.040Z] move: inbox → build-context
+          - [2026-07-08T14:21:11.043Z] action: launched "Context Building" in background → .mini-board/logs/mb-18-1783520471040-Context Building.log
+          - [2026-07-08T14:21:12.378Z] session: attached Claude session 022cde33-40ab-4477-a88a-19b21a3b8f58 (captured from mb-18-1783520471040-Context Building.log)
+          - [2026-07-08T14:23:42.753Z] session: Research done. Summary + testing approaches:
+
+          **Ticket context (mb-18).** Slack thread unreadable — Slack MCP token missing `channels:history` scope, only ticket comment available. Feature lives in Newton repo, not mini-board:
+
+          - Bottom bar = `DashboardFooter` (`apps/frontend/src/components/mdx/DashboardFooter.mdx.tsx`) — renders "What would you like to do next?" + `DigestButton` actions (`invoke_blueprint` / `new` / `redirect` types via `useActionButtonAction.ts`). Renders nothing when no actions.
+          - Digest MDX is LLM-generated server-side: design prompts in `apps/server/newton/agent/design/` (`prompts/guidance.md`, `mdx-catalog.json`). Catalog usage example literally tells model `label="What'\''s next"` on DashboardFooter — so model sometimes also writes body `Section` titled "What'\''s next" with Re-Run Blueprint `ActionButton`. Duplication is emergent model behavior, not one code bug.
+          - Server has validator hooks already: `agent/design/component_validator.py`, `mdx_compile_validator.py` — natural enforcement point.
+          - Product (per ticket) leans: drop bottom bar, keep prompt box only.
+
+          **Testing approaches — pick per layer, duplication spans prompt + render:**
+
+          1. **Deterministic validator tests (pytest, backend).** Extend `component_validator.py` to reject/strip second next-step affordance (body "What'\''s next" section when `DashboardFooter` present — or `DashboardFooter` itself, if product removes it). Unit-test with fixture MDX. Cheapest, catches every generation regardless of model drift. Strongest option — enforcement, not hope.
+
+          2. **Prompt-eval regression (backend eval harness).** Newton already has eval commands (`apple/evaluation`, `eval_*` mgmt commands). Batch-generate digests from sample runs, assert ≤1 next-step affordance, track duplication rate before/after prompt/catalog edit. Validates guidance change actually works, not just that validator masks it.
+
+          3. **Frontend component tests (Vitest + Testing Library).** `DashboardFooter` render/no-render contract; `
+          - [2026-07-08T14:28:44.637Z] move: build-context → agent
+          Instruction: Start working on the ticket, file a PR when ready' --output-format stream-json --verbose --permission-mode bypassPermissions
+      - at: 2026-07-08T14:29:00.449Z
+        kind: session
+        text: attached Claude session f2c1dbdc-a2b1-445b-954a-ea4aab8fb1a4 (captured from mb-18-1783520924638-Start Work.log)
+      - at: 2026-07-08T14:43:45.449Z
+        kind: action
+        text: "background run went quiet — no result after 15m (log: .mini-board/logs/mb-18-1783520924638-Start Work.log)"
+    origin:
+      source: slack-source
+      key: "1783465236.235269"
+    lane_visits:
+      build-context: 1
+      agent: 1
+connectors:
+  claude:
+    configured: true
+    connected: true
+    detail: 2.1.204 (Claude Code) · auth verified 2026-07-08T01:40:49.450Z
+    checked: 2026-07-08T12:38:39.254Z
+    verified: 2026-07-08T01:40:49.450Z
+  slack:
+    configured: true
+    connected: true
+    detail: npx -y @modelcontextprotocol/server-slack - ✔ Connected
+    checked: 2026-07-08T12:38:39.255Z
+  atlassian:
+    configured: true
+    connected: true
+    detail: https://mcp.atlassian.com/v1/mcp (HTTP) - ✔ Connected
+    checked: 2026-07-08T12:38:39.255Z
+  gdrive:
+    configured: false
+    connected: false
+    detail: not registered (claude mcp list has no "gdrive")
+    checked: 2026-07-08T12:38:39.255Z
+sources:
+  pr-s:
+    last_status: ok
+    last_run: 2026-07-08T11:18:14.957Z
+    last_summary: 0 new cards
+    last_session: 63edb3c9-e4dd-48ab-992b-118116f361c2
+  slack-source:
+    last_status: ok
+    last_run: 2026-07-08T11:34:42.711Z
+    last_summary: 6 new cards, 1 duplicate skipped
+    last_session: 2357cbb2-51d2-424d-a59d-5eac641c15b6
+sync_watch:
+  last_run: 2026-07-08T15:20:46.416Z
+  checked: 13
+  errors: 0
+  moved: []
+triage:
+  last_status: ok
+  last_run: 2026-07-08T13:40:17.710Z
+  last_summary: 12 moved
+  last_moved:
+    - id: mb-1
+      to: waiting-pr
+      reason: "PR #1570 is an open draft (only a bot comment so far) — work is out as a PR, waiting on it"
+    - id: mb-2
+      to: waiting-pr
+      reason: "Tracking hotfix PR #1568 is an open draft; NP-8179 and NP-9391 are both In Code Review in Jira"
+    - id: mb-3
+      to: review
+      reason: "PR #1561 is open, non-draft, awaiting review, and NP-9449 is In Code Review in Jira"
+    - id: mb-4
+      to: follow-up
+      reason: "PR #1559 is APPROVED (sdbnewton) but still a draft — needs the human to mark ready and merge"
+    - id: mb-5
+      to: waiting-pr
+      reason: "PR #1551 is an open draft with no reviews yet — waiting on the PR, not intake"
+    - id: mb-6
+      to: waiting-pr
+      reason: "PR #1545 is an open draft with no reviews yet — waiting on the PR, not intake"
+    - id: mb-7
+      to: waiting-pr
+      reason: "PR #1544 is an open draft with no reviews yet — waiting on the PR, not intake"
+    - id: mb-8
+      to: waiting-pr
+      reason: "PR #1524 is an open draft with no reviews yet — waiting on the PR, not intake"
+    - id: mb-9
+      to: waiting-pr
+      reason: "PR #1487 is an open draft with no reviews yet — waiting on the PR, not intake"
+    - id: mb-10
+      to: waiting-pr
+      reason: "PR #1486 is an open draft with no reviews yet — waiting on the PR, not intake"
+    - id: mb-14
+      to: follow-up
+      reason: NP-9371 is In QA and assigned to Maximiliano Tortosa — fix already in flight elsewhere, so this awaits follow-up on QA outcome, not intake
+    - id: mb-17
+      to: merged
+      reason: "Fix PR #1525 for the MCP 421 issue is already MERGED and NP-9429 is In QA; NP-9428 was filed from that PR — verify, don't triage"
+  last_session: 78724cc6-2513-43ff-87d9-7e6f42af60b5

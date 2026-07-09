@@ -41,10 +41,11 @@ columns:
     on_enter:
       # Fire an agent with the card's full context the moment you drag it here.
       - name: Dispatch agent
-        run: claude -p {{prompt}} --output-format json
+        run: claude -p {{prompt}} --output-format stream-json --verbose --permission-mode bypassPermissions
         background: true
         capture_session: true
-
+    on_done: waiting-pr # when the agent run completes, funnel the card here
+    max_visits: 2 # loop guard: 3rd entry parks the card in the paused lane
   - id: waiting-pr
     title: Waiting on PR
     accent: "#0d9488"
@@ -69,27 +70,79 @@ columns:
     #     run: ./scripts/run-e2e.sh {{card.pr}}
     #     background: true
 
+  - id: paused
+    title: Paused
+    attention: true # loop-guarded cards land here and need a human unblock
+
   - id: done
     title: Done
     accent: "#16a34a"
 
+# Pipelines: a lane with `on_done: <lane>` funnels its cards onward when the
+# lane's agent run completes (the target lane's automations fire — lanes
+# chain). `max_visits` (per lane or the default here) is the loop guard: a
+# card that would re-enter a lane too many times is parked in `paused`.
+flow:
+  paused: paused
+  max_visits: 2
+
 # `mb sync` pulls live PR state via the gh CLI and can move cards for you.
+# While `mb web` runs, a watcher re-syncs on this interval and applies the
+# auto_move rules — approved PRs surface for your attention on their own.
 sync:
+  every: 5m # 5m/30m/1h… or "off" to only sync manually
   auto_move:
     pr_merged: merged
     pr_closed: done
+    pr_approved: follow-up # approved + ready → needs you
+    # pr_changes_requested: follow-up
+    # pr_checks_failing: agent  # failing CI → the agent lane fires remediation on_enter
+
+# Triage — the board's intelligence layer (the Triage button / `mb triage`).
+# An agent inspects cards in the lanes below, cross-references live state
+# with its tools (does this ask already have a PR? is the ticket in review?),
+# fills in missing refs, and moves each card to the lane it truly belongs in.
+# Every move logs its reason on the card. Deterministic PR-state moves are
+# handled by sync.auto_move above; triage covers what needs judgment.
+triage:
+  columns: [inbox] # lanes whose cards get triaged
+  tools: [github, atlassian, slack]
+  # instruction: extra guidance, e.g. "cards about infra go to the infra lane"
+
+# Jira mirror — makes Jira the source of truth for lanes and tickets.
+# THE mapping lives on the lanes: give a column `jira_status: "In Review"`
+# and Jira sync (the Jira panel / `mb jira`) moves issues with that status
+# into that lane, creating cards for issues the board hasn't seen. With
+# push_moves, dragging a card into a mapped lane transitions the issue.
+# jira:
+#   project: NP
+#   jql: assignee = currentUser() AND statusCategory != Done
+#   push_moves: true        # dragging a card transitions the issue
+#   lanes_from_jira: true   # workflow statuses become lanes automatically
+#   config_issue: NP-1000   # lane config (on_enter/on_done/max_visits) parks
+#                           # in this issue's description as a ```yaml lanes:``` block
+#   comments: true          # agent run summaries land as issue comments
+#   labels: true            # loop-guarded (paused) cards get the mb-paused label
+
+# Card surface — what a card's details look like. Refs always link
+# deterministically (PR URL, defaults.ticket_url + key, Slack permalink).
+# "Refresh details" in the card drawer runs an agent that fetches live state
+# for the refs and writes a summary, key facts, and links onto the card.
+surface:
+  tools: [github, atlassian, slack]
+  # instruction: extra guidance, e.g. "always include the preview-env link"
 
 # Named actions. These defaults are built in — override them here if you want
 # different flags, a wrapper script, a different model, etc.
 actions:
   # `mb comment <card> "..." --fire` → resumes the card's latest Claude session.
   fire_comment:
-    run: claude --resume {{card.session}} -p {{message}} --output-format json
+    run: claude --resume {{card.session}} -p {{message}} --output-format stream-json --verbose --permission-mode bypassPermissions
     background: true
     capture_session: true
   # `mb agent <card> ["instruction"]` → brand-new Claude session, full card context.
   new_agent:
-    run: claude -p {{prompt}} --output-format json
+    run: claude -p {{prompt}} --output-format stream-json --verbose --permission-mode bypassPermissions
     background: true
     capture_session: true
   # Ideas:

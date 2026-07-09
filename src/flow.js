@@ -7,7 +7,7 @@
 
 import { getColumn, moveCard, logEntry } from './store.js';
 import { actionsForMove, runAction } from './actions.js';
-import { pushJiraComment, pushJiraLabel } from './jira.js';
+import { pushJiraComment, pushJiraLabel, mustStayInInbox } from './jira.js';
 
 const DEFAULT_MAX_VISITS = 2;
 
@@ -67,6 +67,10 @@ export function applyFlow(root, board, state, completed = []) {
     if (!target || target === card.column) continue;
     if (!getColumn(board, target)) {
       logEntry(card, 'flow', `on_done points at unknown lane "${target}" — staying put`);
+      continue;
+    }
+    if (mustStayInInbox(board, card, target)) {
+      logEntry(card, 'flow', `on_done → "${target}" held — no Jira ticket, card stays put`);
       continue;
     }
     const from = card.column;

@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { ensureLogDir, logEntry, moveCard, getColumn } from './store.js';
+import { mustStayInInbox } from './jira.js';
 import { toolAllowList, extractResultJson } from './sources.js';
 import { nowIso, shellQuote, claudeFlags } from './util.js';
 
@@ -128,6 +129,11 @@ export function applyDecisions(board, state, decisions) {
       }
     }
     const target = d.column && d.column !== card.column && getColumn(board, d.column) ? d.column : null;
+    if (target && mustStayInInbox(board, card, target)) {
+      logEntry(card, 'triage', `triage: ${d.reason ?? 'move'} → "${target}" — held in inbox (no Jira ticket)`);
+      if (changed) updated.push(d.card); else skipped++;
+      continue;
+    }
     if (target) {
       moveCard(board, state, d.card, target);
       logEntry(card, 'triage', `triage: ${d.reason ?? 'moved'} → "${target}"`);

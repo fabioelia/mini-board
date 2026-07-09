@@ -208,6 +208,8 @@
   .sess-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
   .sess-row .t { font-size: 13px; font-weight: 600; color: #26231f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sess-row .m { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #a8a29a; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess-row .m a.sess-link { color: inherit; text-decoration: none; border-bottom: 1px dotted #c4bfb5; }
+  .sess-row .m a.sess-link:hover { color: #0f766e; border-bottom-color: #0f766e; }
   .sess-row .st { font-size: 11.5px; font-weight: 600; flex: 0 0 auto; }
   .sess-row .wh { font-size: 11px; color: #b0aaa1; width: 64px; text-align: right; flex: 0 0 64px; }
 
@@ -389,11 +391,15 @@
             <input id="j-cfgissue" placeholder="config issue (e.g. NP-1000) — lane config parks in its description" style="flex:2" />
           </div>
           <input id="j-jql" placeholder="JQL (default: assignee = currentUser() AND statusCategory != Done)" style="margin-bottom:8px" />
+          <input id="j-boardurl" placeholder="board URL for session links in comments (default http://localhost:4400)" style="margin-bottom:8px" />
           <div style="margin-bottom:8px">
             <label class="cb"><input type="checkbox" id="j-push"> push board moves to Jira</label>
             <label class="cb"><input type="checkbox" id="j-lanes"> lanes from Jira statuses</label>
             <label class="cb"><input type="checkbox" id="j-comments"> agent summaries → issue comments</label>
             <label class="cb"><input type="checkbox" id="j-labels"> paused → mb-paused label</label>
+            <label class="cb" title="Cards whose issue drops out of the JQL scope (off-sprint, reassigned, done) get archived on sync. Jira is the source of truth."><input type="checkbox" id="j-reconcile"> archive cards that leave Jira scope</label>
+            <label class="cb" title="Dragging a ticketless card into a status-mapped lane files a Jira issue (active sprint, assigned to you) and attaches the key."><input type="checkbox" id="j-createtickets"> promote out of inbox → file a ticket</label>
+            <label class="cb" title="The config issue may set on_enter/on_leave — shell commands that run on THIS machine. Anyone who can edit that issue can run code here. Leave off unless you trust every editor."><input type="checkbox" id="j-remoteactions"> ⚠ allow on_enter/on_leave from config issue</label>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn-sm ghost" id="j-sync">Sync now</button>
@@ -808,6 +814,7 @@ function renderBoard() {
       try {
         const res = await api('/api/move', { card: id, column: target });
         DATA = res; render();
+        if (res.filing) { toast('No Jira ticket yet', res.message); return; }
         const acts = (res.actions || []).filter(Boolean);
         const col = DATA.board.columns.find((c) => c.id === target);
         const ruleName = col?.on_enter?.[0]?.name;
@@ -1093,6 +1100,10 @@ function renderJiraPanel() {
   $('#j-lanes').checked = !!cfg.lanes_from_jira;
   $('#j-comments').checked = !!cfg.comments;
   $('#j-labels').checked = !!cfg.labels;
+  $('#j-remoteactions').checked = !!cfg.allow_remote_actions;
+  $('#j-reconcile').checked = cfg.reconcile !== false;
+  $('#j-boardurl').value = cfg.board_url && cfg.board_url !== 'http://localhost:4400' ? cfg.board_url : '';
+  $('#j-createtickets').checked = cfg.create_tickets !== false;
 }
 
 $('#j-save').addEventListener('click', async () => {
@@ -1106,6 +1117,10 @@ $('#j-save').addEventListener('click', async () => {
       config_issue: $('#j-cfgissue').value.trim(),
       comments: $('#j-comments').checked,
       labels: $('#j-labels').checked,
+      allow_remote_actions: $('#j-remoteactions').checked,
+      reconcile: $('#j-reconcile').checked,
+      board_url: $('#j-boardurl').value.trim(),
+      create_tickets: $('#j-createtickets').checked,
     });
     jiraDirty = false;
     render();
@@ -1229,12 +1244,13 @@ function renderConnection() {
       <span class="sess-dot${st2.pulse ? ' pulse' : ''}" style="background:${st2.d};${st2.pulse ? 'animation:pulseDot 1.4s infinite;' : ''}"></span>
       <div style="flex:1;min-width:0">
         <div class="t">${esc(r.board_run ? r.board_run.title : r.card.title)}</div>
-        <div class="m">${esc(r.sess.id)} · ${esc(r.sess.label || '')}</div>
+        <div class="m">${r.card && r.sess.id && !r.sess.id.includes('…') ? `<a class="sess-link" href="/session/${esc(r.sess.id)}" target="_blank" title="open session viewer">${esc(r.sess.id)}</a>` : esc(r.sess.id)} · ${esc(r.sess.label || '')}</div>
       </div>
       <span class="st" style="color:${st2.c}">${st2.l}</span>
       <span class="wh">${r.sess.at ? ago(r.sess.at) : ''}</span>
     </div>`;
   }).join('') || '<div style="padding:16px;font-size:12.5px;color:#a8a29a">No Claude sessions yet — drag a card into an agent lane or use “New agent” in a card.</div>';
+  $$('#sess-list .sess-link').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
   $$('#sess-list .sess-row').forEach((el) => el.addEventListener('click', () => {
     if (el.dataset.card) { setView('board'); openDrawer(el.dataset.card); }
     else if (el.dataset.runKind) openRunModal(el.dataset.runKind, el.dataset.runId || null, el.dataset.runTitle);
@@ -1315,9 +1331,10 @@ function fillDrawer(id) {
 
   const latest = c.sessions?.length ? c.sessions[c.sessions.length - 1] : null;
   const agentBusy = !!c.pending_session_logs?.length;
+  const sessLink = (s) => `<a href="/session/${esc(s.id)}" target="_blank" title="open session viewer" style="color:inherit">${esc(s.id)}</a>`;
   $('#dw-sess-id').innerHTML = agentBusy
-    ? `${latest ? esc(latest.id) : 'starting…'} <span class="act-live"><span class="d"></span>agent working — reply lands here</span>`
-    : (latest ? esc(latest.id) : 'none yet — Send starts one');
+    ? `${latest ? sessLink(latest) : 'starting…'} <span class="act-live"><span class="d"></span>agent working — reply lands here</span>`
+    : (latest ? sessLink(latest) : 'none yet — Send starts one');
   // "View run": what that session actually did (parsed from its run log)
   $('#dw-run-btn').style.display = (latest || agentBusy) ? '' : 'none';
   $('#dw-reset-btn').style.display = (latest && !agentBusy) ? '' : 'none';
@@ -1813,7 +1830,9 @@ function renderSidebar() {
 }
 
 function render() {
-  if (!DATA) return;
+  // never rebuild the DOM mid-drag — it destroys the dragged node and every
+  // drop target, silently killing the drag (dragend re-renders to catch up)
+  if (!DATA || dragId) return;
   const w = DATA.sync_watch;
   const watchTxt = DATA.sync_every === 'off' || DATA.sync_every === false
     ? 'PR watch off'

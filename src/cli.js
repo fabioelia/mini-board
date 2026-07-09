@@ -24,7 +24,10 @@ import { boardSources, runPull, harvestPulls } from './sources.js';
 import { runTriage, harvestTriage } from './triage.js';
 import { harvestEnrich } from './surface.js';
 import { applyFlow } from './flow.js';
-import { runJiraSync, harvestJiraSync } from './jira.js';
+import {
+  runJiraSync, harvestJiraSync, harvestJiraCreates, pushJiraTransition, pushJiraCreate,
+  pushJiraConfig, jiraConfig, pushSessionProgress, mustStayInInbox, stagingLane,
+} from './jira.js';
 
 const HELP = `mini-board — a tiny YAML-driven board for PRs, tickets, and Slack asks
 
@@ -55,7 +58,8 @@ Usage: mb <command> [args]
        --bg --dry-run              background / just print the command
   mb triage [--dry-run]            smart-place cards: an agent checks live PR/ticket
                                    state and moves cards to the lane they belong in
-  mb jira [--dry-run]              mirror Jira: issues → cards, statuses → lanes
+  mb jira [--dry-run|--push-config] mirror Jira: issues → cards, statuses → lanes
+  mb adopt <project> <config-issue> bootstrap a board from its Jira config ticket
   mb sessions                      every Claude session across all cards
   mb flag <card> "reason"          manually mark a card as needing attention
   mb unflag <card>                 clear manual flags
@@ -125,7 +129,10 @@ function harvest(root, board, state) {
   const triage = harvestTriage(root, board, state);
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
-  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira) saveState(root, state);
+  const filed = harvestJiraCreates(root, board, state);
+  const progress = pushSessionProgress(root, board, state);
+  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed || progress) saveState(root, state);
+  for (const f of filed ?? []) console.log(paint.dim(`${f.id} filed in Jira as ${f.key}`));
   if (jira) {
     console.log(jira.ok ? paint.dim(`jira sync finished: ${jira.summary}`) : paint.red(`jira sync failed: ${jira.error}`));
   }
@@ -208,6 +215,15 @@ const commands = {
       fail(`unknown column "${toColumn}" — columns: ${board.columns.map((c) => c.id).join(', ')}`);
     }
     const from = card.column;
+    if (mustStayInInbox(board, card, toColumn)) {
+      const filing = pushJiraCreate(root, board, state, id, toColumn);
+      saveState(root, state);
+      if (filing) {
+        console.log(`${paint.bold(id)} has no Jira ticket — filing one at "${filing.status}" first; it moves to ${toColumn} when the key lands (next mb board)`);
+        return;
+      }
+      fail(`${id} has no Jira ticket — it stays in "${stagingLane(board)}" (map "${toColumn}" to a Jira status, or enable jira.create_tickets)`);
+    }
     if (opts.comment) logEntry(card, 'comment', String(opts.comment));
     const { moved } = moveCard(board, state, id, toColumn);
     if (!moved) {
@@ -222,6 +238,9 @@ const commands = {
         reportAction(res);
       }
     }
+    // board → Jira: dragging a ticketed card transitions the issue
+    const jiraPush = card.refs?.ticket ? pushJiraTransition(root, board, state, id, toColumn) : null;
+    if (jiraPush?.pushed) console.log(paint.dim(`jira: ${card.refs.ticket} → "${jiraPush.pushed}" (background)`));
     saveState(root, state);
   },
 
@@ -526,11 +545,51 @@ const commands = {
     }
   },
 
+  // mb adopt NP NP-9511 — bootstrap a board anywhere from the config ticket.
+  // Writes a minimal board.yml (just inbox + the jira pointer); the first
+  // `mb jira` sync restores lanes, automations, sources — the whole board.
+  adopt(args) {
+    const [project, configIssue] = args;
+    if (!project || !/^[A-Z][A-Z0-9]+-\d+$/i.test(configIssue ?? '')) {
+      fail('usage: mb adopt <project> <config-issue>   e.g. mb adopt NP NP-9511');
+    }
+    const file = path.join(process.cwd(), BOARD_FILE);
+    if (fs.existsSync(file)) fail(`${BOARD_FILE} already exists here — adopt bootstraps an empty directory`);
+    fs.writeFileSync(file, [
+      '# mini-board — bootstrapped by `mb adopt`. The real configuration lives',
+      `# in Jira issue ${configIssue.toUpperCase()}; the first \`mb jira\` sync restores it here.`,
+      'board:',
+      '  name: My Work',
+      'columns:',
+      '  - id: inbox',
+      '    title: Inbox',
+      '    attention: true',
+      'jira:',
+      `  project: ${project.toUpperCase()}`,
+      `  config_issue: ${configIssue.toUpperCase()}`,
+      '  lanes_from_jira: true',
+      '  # restores lane automations/actions/sources from the ticket — these run',
+      '  # SHELL COMMANDS here; anyone who can edit the ticket can run code here.',
+      '  allow_remote_actions: true',
+      '',
+    ].join('\n'));
+    console.log(`${paint.bold(BOARD_FILE)} written for ${project.toUpperCase()} ← ${configIssue.toUpperCase()}`);
+    console.log(`now run ${paint.bold('mb jira')} to restore the board (then \`mb board\` / \`mb web\`)`);
+    console.log(paint.dim('note: allow_remote_actions is ON — ticket edit rights = shell access here'));
+  },
+
   jira(args, opts) {
     const root = requireRoot();
     const board = loadBoard(root);
     const state = loadState(root);
     harvest(root, board, state);
+    if (opts.push_config) {
+      const res = pushJiraConfig(root, board);
+      saveState(root, state);
+      if (!res) fail('jira.config_issue not set in board.yml — nowhere to park the config');
+      console.log(`parking full board config on ${jiraConfig(board).config_issue} ${paint.dim(`→ ${res.log}`)}`);
+      return;
+    }
     const res = runJiraSync(root, board, state, { dryRun: !!opts.dry_run });
     saveState(root, state);
     if (res.dryRun) console.log(paint.dim(`would run: ${res.cmd.slice(0, 300)}…`));

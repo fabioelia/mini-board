@@ -19,7 +19,10 @@ import { boardSources, runPull, harvestPulls, parsePullActivity } from './source
 import { runTriage, harvestTriage, triageConfig } from './triage.js';
 import { runEnrich, harvestEnrich, surfaceConfig } from './surface.js';
 import { applyFlow } from './flow.js';
-import { runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition } from './jira.js';
+import {
+  runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate,
+  harvestJiraCreates, pushJiraConfig, pushSessionProgress, mustStayInInbox, stagingLane,
+} from './jira.js';
 import { nowIso, parseDuration } from './util.js';
 
 const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
@@ -33,7 +36,9 @@ function boardPayload(root) {
   const triage = harvestTriage(root, board, state);
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
-  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira) saveState(root, state);
+  const filed = harvestJiraCreates(root, board, state);
+  const progress = pushSessionProgress(root, board, state);
+  if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed || progress) saveState(root, state);
   const cards = Object.entries(state.cards)
     .filter(([, c]) => !c.archived)
     .map(([id, card]) => ({ id, ...card, attention: computeAttention(board, card) }));
@@ -269,12 +274,67 @@ function json(res, code, obj) {
 }
 
 export function startServer(root, port = 4400) {
+  // Any board.yml mutation re-parks the FULL config on the Jira config issue
+  // (debounced — a burst of edits becomes one push). The ticket is the source
+  // of truth; the local file is just the working copy.
+  let configPushTimer = null;
+  const queueConfigPush = () => {
+    const board = loadBoard(root);
+    const cfg = jiraConfig(board);
+    if (!cfg.enabled || !cfg.config_issue) return;
+    clearTimeout(configPushTimer);
+    configPushTimer = setTimeout(() => {
+      try { pushJiraConfig(root, loadBoard(root)); } catch (err) { console.error(`jira config push failed: ${err.message}`); }
+    }, 10_000);
+    configPushTimer.unref?.();
+  };
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     try {
       if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         res.end(fs.readFileSync(path.join(WEB_DIR, 'index.html')));
+        return;
+      }
+      // Standalone session viewer — the URL that Jira comments link to.
+      // Renders the run transcript and live-polls while the run is going.
+      if (req.method === 'GET' && /^\/session\/[A-Za-z0-9-]+$/.test(url.pathname)) {
+        const sid = url.pathname.split('/')[2];
+        const state = loadState(root);
+        const hit = Object.entries(state.cards).find(([, c]) => (c.sessions ?? []).some((s) => s.id === sid));
+        const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (!hit) {
+          res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(`<!doctype html><body style="font-family:ui-monospace,monospace;background:#111;color:#ddd;padding:40px">no card carries session <b>${esc(sid)}</b> — it may predate the board or live in another checkout</body>`);
+          return;
+        }
+        const [cardId, card] = hit;
+        const ticketUrl = card.refs?.ticket ? `${loadBoard(root).defaults?.ticket_url ?? ''}${card.refs.ticket}` : null;
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(card.title)} · session</title>
+<style>
+  body{font-family:ui-monospace,SFMono-Regular,monospace;background:#101014;color:#d6d6dc;margin:0;padding:28px;font-size:13px;line-height:1.5}
+  h1{font-size:15px;margin:0 0 2px} .sub{color:#8a8a94;margin-bottom:18px} .sub a{color:#7dd3c8}
+  .ev{padding:5px 10px;border-left:2px solid #2a2a33;margin:3px 0;white-space:pre-wrap;word-break:break-word}
+  .ev.text{border-color:#0d9488;color:#e8e8ee} .ev.tool{border-color:#7c3aed;color:#b9a8e8}
+  .ev.tool_result{border-color:#3a3a44;color:#8a8a94} .ev.init{border-color:#1d4ed8;color:#93b4f5}
+  .ev.result{border-color:#16a34a;color:#86efac;font-weight:600} .ev.error{border-color:#b91c1c;color:#fca5a5}
+  #status{position:fixed;top:14px;right:18px;color:#8a8a94}.live{color:#34d399}
+</style></head><body>
+<h1>${esc(card.title)}</h1>
+<div class="sub">card ${esc(cardId)} · lane ${esc(card.column)} · session ${esc(sid)}${ticketUrl ? ` · <a href="${esc(ticketUrl)}">${esc(card.refs.ticket)}</a>` : ''} · <a href="/">board</a></div>
+<div id="status">…</div><div id="events"></div>
+<script>
+  const render = (d) => {
+    document.getElementById('status').innerHTML = d.running ? '<span class="live">● live</span>' : 'finished';
+    document.getElementById('events').innerHTML = (d.events || []).map((e) =>
+      '<div class="ev ' + e.kind + '">' + e.text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div>').join('');
+    if (d.running) setTimeout(tick, 4000);
+    else if (!(d.events || []).length) document.getElementById('events').textContent = 'no transcript found — the run log may have been cleaned up';
+  };
+  const tick = () => fetch('/api/session/activity?card=${encodeURIComponent(cardId)}&session=${encodeURIComponent(sid)}').then((r) => r.json()).then(render);
+  tick();
+</script></body></html>`);
         return;
       }
       if (req.method === 'GET' && url.pathname === '/api/board') {
@@ -364,6 +424,20 @@ export function startServer(root, port = 4400) {
         if (!hit) return json(res, 404, { error: `no card "${ref}"` });
         if (!getColumn(board, column)) return json(res, 400, { error: `unknown column "${column}"` });
         const from = hit.card.column;
+        // no Jira ticket → the card stays in inbox; file the ticket first and
+        // complete the move when the key lands (harvestJiraCreates)
+        if (mustStayInInbox(board, hit.card, column)) {
+          const filing = pushJiraCreate(root, board, state, hit.id, column);
+          saveState(root, state);
+          if (filing) {
+            return json(res, 200, {
+              ok: true, moved: false, filing: true,
+              message: `no Jira ticket yet — filing one at "${filing.status}"; the card moves there when the key lands`,
+              ...boardPayload(root),
+            });
+          }
+          return json(res, 409, { error: `"${hit.card.title}" has no Jira ticket — it stays in ${stagingLane(board)} (map the target lane to a Jira status, or enable jira.create_tickets)` });
+        }
         if (comment) logEntry(hit.card, 'comment', String(comment));
         const { moved } = moveCard(board, state, hit.id, column);
         const actionResults = [];
@@ -373,8 +447,12 @@ export function startServer(root, port = 4400) {
             actionResults.push({ cmd: r.cmd, ok: r.ok, background: !!r.background, error: r.error });
           }
         }
-        // board → Jira: dragging into a status-mapped lane transitions the issue
-        const jiraPush = moved ? pushJiraTransition(root, board, state, hit.id, column) : null;
+        // board → Jira: dragging into a status-mapped lane transitions the
+        // issue — or FILES one if the card doesn't have a ticket yet (inbox
+        // promotion: once it leaves inbox, it's a Jira ticket).
+        const jiraPush = moved && state.cards[hit.id]?.refs?.ticket
+          ? pushJiraTransition(root, board, state, hit.id, column)
+          : null;
         saveState(root, state);
         json(res, 200, { ok: true, moved, actions: actionResults, jira_push: jiraPush?.pushed ?? null, ...boardPayload(root) });
         return;
@@ -422,10 +500,15 @@ export function startServer(root, port = 4400) {
             ...(String(body.config_issue ?? '').trim() ? { config_issue: String(body.config_issue).trim().toUpperCase() } : {}),
             ...(body.comments ? { comments: true } : {}),
             ...(body.labels ? { labels: true } : {}),
+            ...(body.allow_remote_actions ? { allow_remote_actions: true } : {}),
+            ...(body.reconcile === false ? { reconcile: false } : {}),
+            ...(String(body.board_url ?? '').trim() ? { board_url: String(body.board_url).trim().replace(/\/+$/, '') } : {}),
+            ...(body.create_tickets === false ? { create_tickets: false } : {}),
             ...(String(body.instruction ?? '').trim() ? { instruction: String(body.instruction).trim() } : {}),
           }));
         }
         fs.writeFileSync(file, doc.toString());
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -449,6 +532,7 @@ export function startServer(root, port = 4400) {
           }));
         }
         fs.writeFileSync(file, doc.toString());
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -461,6 +545,7 @@ export function startServer(root, port = 4400) {
           ...(String(body.instruction ?? '').trim() ? { instruction: String(body.instruction).trim() } : {}),
         }));
         fs.writeFileSync(file, doc.toString());
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -475,6 +560,7 @@ export function startServer(root, port = 4400) {
           tools: (Array.isArray(body.tools) ? body.tools : []).map(String),
           instruction: String(body.instruction ?? '').trim() || null,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -647,12 +733,14 @@ export function startServer(root, port = 4400) {
           max_visits: maxVisits,
           jira_status: String(body.jira_status ?? '').trim() || null,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, id, ...boardPayload(root) });
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/column/move') {
         const { id, dir } = await readBody(req);
         moveColumn(root, id, Number(dir) || 1);
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -674,6 +762,7 @@ export function startServer(root, port = 4400) {
           saveState(root, state);
         }
         deleteColumn(root, id);
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -694,6 +783,7 @@ export function startServer(root, port = 4400) {
           capture_session: !!body.capture_session,
           orig: body.orig ? { column: body.orig.column, trigger: body.orig.trigger, index: Number(body.orig.index) } : null,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -701,6 +791,7 @@ export function startServer(root, port = 4400) {
         const body = await readBody(req);
         if (!['on_enter', 'on_leave'].includes(body.trigger)) return json(res, 400, { error: 'trigger must be on_enter or on_leave' });
         deleteAutomation(root, { column: body.column, trigger: body.trigger, index: Number(body.index) });
+        queueConfigPush();
         json(res, 200, { ok: true, ...boardPayload(root) });
         return;
       }
@@ -729,6 +820,7 @@ export function startServer(root, port = 4400) {
           column,
           enabled: body.enabled !== false,
         });
+        queueConfigPush();
         json(res, 200, { ok: true, id, ...boardPayload(root) });
         return;
       }
@@ -777,6 +869,14 @@ function startPrWatcher(root) {
         errors: results.filter((r) => r.error).length,
         moved: moved.map((r) => ({ id: r.id, to: r.moved })),
       };
+      // syncAll can take a while; background-run markers written by API
+      // requests in the meantime (jira sync, pulls, triage) must survive
+      // this save — re-read them so a stale snapshot doesn't orphan a run.
+      const fresh = loadState(root);
+      for (const key of ['pending_jira', 'pending_pulls', 'pending_triage', 'pending_jira_creates']) {
+        if (fresh[key] !== undefined) state[key] = fresh[key];
+        else delete state[key];
+      }
       saveState(root, state);
       for (const r of moved) console.log(`watch: ${r.id} auto-moved → ${r.moved}`);
     } catch (err) {

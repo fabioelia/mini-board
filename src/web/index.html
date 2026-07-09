@@ -208,6 +208,8 @@
   .sess-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
   .sess-row .t { font-size: 13px; font-weight: 600; color: #26231f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sess-row .m { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #a8a29a; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess-row .m a.sess-link { color: inherit; text-decoration: none; border-bottom: 1px dotted #c4bfb5; }
+  .sess-row .m a.sess-link:hover { color: #0f766e; border-bottom-color: #0f766e; }
   .sess-row .st { font-size: 11.5px; font-weight: 600; flex: 0 0 auto; }
   .sess-row .wh { font-size: 11px; color: #b0aaa1; width: 64px; text-align: right; flex: 0 0 64px; }
 
@@ -1241,12 +1243,13 @@ function renderConnection() {
       <span class="sess-dot${st2.pulse ? ' pulse' : ''}" style="background:${st2.d};${st2.pulse ? 'animation:pulseDot 1.4s infinite;' : ''}"></span>
       <div style="flex:1;min-width:0">
         <div class="t">${esc(r.board_run ? r.board_run.title : r.card.title)}</div>
-        <div class="m">${esc(r.sess.id)} · ${esc(r.sess.label || '')}</div>
+        <div class="m">${r.card && r.sess.id && !r.sess.id.includes('…') ? `<a class="sess-link" href="/session/${esc(r.sess.id)}" target="_blank" title="open session viewer">${esc(r.sess.id)}</a>` : esc(r.sess.id)} · ${esc(r.sess.label || '')}</div>
       </div>
       <span class="st" style="color:${st2.c}">${st2.l}</span>
       <span class="wh">${r.sess.at ? ago(r.sess.at) : ''}</span>
     </div>`;
   }).join('') || '<div style="padding:16px;font-size:12.5px;color:#a8a29a">No Claude sessions yet — drag a card into an agent lane or use “New agent” in a card.</div>';
+  $$('#sess-list .sess-link').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
   $$('#sess-list .sess-row').forEach((el) => el.addEventListener('click', () => {
     if (el.dataset.card) { setView('board'); openDrawer(el.dataset.card); }
     else if (el.dataset.runKind) openRunModal(el.dataset.runKind, el.dataset.runId || null, el.dataset.runTitle);

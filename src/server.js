@@ -21,7 +21,7 @@ import { runEnrich, harvestEnrich, surfaceConfig } from './surface.js';
 import { applyFlow } from './flow.js';
 import {
   runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate,
-  harvestJiraCreates, pushJiraConfig, pushSessionProgress,
+  harvestJiraCreates, pushJiraConfig, pushSessionProgress, mustStayInInbox, stagingLane,
 } from './jira.js';
 import { nowIso, parseDuration } from './util.js';
 
@@ -36,7 +36,7 @@ function boardPayload(root) {
   const triage = harvestTriage(root, board, state);
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
-  const filed = harvestJiraCreates(root, state);
+  const filed = harvestJiraCreates(root, board, state);
   const progress = pushSessionProgress(root, board, state);
   if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed || progress) saveState(root, state);
   const cards = Object.entries(state.cards)
@@ -424,6 +424,20 @@ export function startServer(root, port = 4400) {
         if (!hit) return json(res, 404, { error: `no card "${ref}"` });
         if (!getColumn(board, column)) return json(res, 400, { error: `unknown column "${column}"` });
         const from = hit.card.column;
+        // no Jira ticket → the card stays in inbox; file the ticket first and
+        // complete the move when the key lands (harvestJiraCreates)
+        if (mustStayInInbox(board, hit.card, column)) {
+          const filing = pushJiraCreate(root, board, state, hit.id, column);
+          saveState(root, state);
+          if (filing) {
+            return json(res, 200, {
+              ok: true, moved: false, filing: true,
+              message: `no Jira ticket yet — filing one at "${filing.status}"; the card moves there when the key lands`,
+              ...boardPayload(root),
+            });
+          }
+          return json(res, 409, { error: `"${hit.card.title}" has no Jira ticket — it stays in ${stagingLane(board)} (map the target lane to a Jira status, or enable jira.create_tickets)` });
+        }
         if (comment) logEntry(hit.card, 'comment', String(comment));
         const { moved } = moveCard(board, state, hit.id, column);
         const actionResults = [];
@@ -436,10 +450,8 @@ export function startServer(root, port = 4400) {
         // board → Jira: dragging into a status-mapped lane transitions the
         // issue — or FILES one if the card doesn't have a ticket yet (inbox
         // promotion: once it leaves inbox, it's a Jira ticket).
-        const jiraPush = moved
-          ? (state.cards[hit.id]?.refs?.ticket
-            ? pushJiraTransition(root, board, state, hit.id, column)
-            : pushJiraCreate(root, board, state, hit.id, column))
+        const jiraPush = moved && state.cards[hit.id]?.refs?.ticket
+          ? pushJiraTransition(root, board, state, hit.id, column)
           : null;
         saveState(root, state);
         json(res, 200, { ok: true, moved, actions: actionResults, jira_push: jiraPush?.pushed ?? null, ...boardPayload(root) });

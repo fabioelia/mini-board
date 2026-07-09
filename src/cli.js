@@ -26,7 +26,7 @@ import { harvestEnrich } from './surface.js';
 import { applyFlow } from './flow.js';
 import {
   runJiraSync, harvestJiraSync, harvestJiraCreates, pushJiraTransition, pushJiraCreate,
-  pushJiraConfig, jiraConfig, pushSessionProgress,
+  pushJiraConfig, jiraConfig, pushSessionProgress, mustStayInInbox, stagingLane,
 } from './jira.js';
 
 const HELP = `mini-board — a tiny YAML-driven board for PRs, tickets, and Slack asks
@@ -129,7 +129,7 @@ function harvest(root, board, state) {
   const triage = harvestTriage(root, board, state);
   const enriched = harvestEnrich(root, board, state);
   const jira = harvestJiraSync(root, board, state);
-  const filed = harvestJiraCreates(root, state);
+  const filed = harvestJiraCreates(root, board, state);
   const progress = pushSessionProgress(root, board, state);
   if (sessions || flowMoves.length || pulls.length || triage || enriched || jira || filed || progress) saveState(root, state);
   for (const f of filed ?? []) console.log(paint.dim(`${f.id} filed in Jira as ${f.key}`));
@@ -215,6 +215,15 @@ const commands = {
       fail(`unknown column "${toColumn}" — columns: ${board.columns.map((c) => c.id).join(', ')}`);
     }
     const from = card.column;
+    if (mustStayInInbox(board, card, toColumn)) {
+      const filing = pushJiraCreate(root, board, state, id, toColumn);
+      saveState(root, state);
+      if (filing) {
+        console.log(`${paint.bold(id)} has no Jira ticket — filing one at "${filing.status}" first; it moves to ${toColumn} when the key lands (next mb board)`);
+        return;
+      }
+      fail(`${id} has no Jira ticket — it stays in "${stagingLane(board)}" (map "${toColumn}" to a Jira status, or enable jira.create_tickets)`);
+    }
     if (opts.comment) logEntry(card, 'comment', String(opts.comment));
     const { moved } = moveCard(board, state, id, toColumn);
     if (!moved) {
@@ -229,12 +238,9 @@ const commands = {
         reportAction(res);
       }
     }
-    // board → Jira: transition the issue, or file one for a ticketless card
-    const jiraPush = card.refs?.ticket
-      ? pushJiraTransition(root, board, state, id, toColumn)
-      : pushJiraCreate(root, board, state, id, toColumn);
+    // board → Jira: dragging a ticketed card transitions the issue
+    const jiraPush = card.refs?.ticket ? pushJiraTransition(root, board, state, id, toColumn) : null;
     if (jiraPush?.pushed) console.log(paint.dim(`jira: ${card.refs.ticket} → "${jiraPush.pushed}" (background)`));
-    if (jiraPush?.status && !jiraPush.pushed) console.log(paint.dim(`jira: filing a ticket at "${jiraPush.status}" (background; key lands on next mb board)`));
     saveState(root, state);
   },
 

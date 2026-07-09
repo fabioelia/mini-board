@@ -814,6 +814,7 @@ function renderBoard() {
       try {
         const res = await api('/api/move', { card: id, column: target });
         DATA = res; render();
+        if (res.filing) { toast('No Jira ticket yet', res.message); return; }
         const acts = (res.actions || []).filter(Boolean);
         const col = DATA.board.columns.find((c) => c.id === target);
         const ruleName = col?.on_enter?.[0]?.name;

@@ -10,7 +10,7 @@ import {
   runJiraSync, harvestJiraSync, pushJiraTransition,
   reconcileLanes, applyLaneConfig, pushJiraComment, pushJiraLabel,
   pushJiraCreate, harvestJiraCreates, serializeBoardConfig, pushJiraConfig,
-  applyFullBoardConfig, parseConfigYaml, extractSessionActivity, pushSessionProgress,
+  applyFullBoardConfig, parseConfigYaml, extractSessionActivity, pushSessionProgress, mustStayInInbox,
 } from '../src/jira.js';
 
 const board = {
@@ -110,6 +110,15 @@ test('applyIssues: reconcile is skipped on empty results and when disabled', () 
   assert.ok(!state.cards['mb-1'].archived); // reconcile off
 });
 
+test('mustStayInInbox: ticketless non-PR cards are quarantined to the first lane', () => {
+  const ticketless = { type: 'slack', refs: {} };
+  assert.equal(mustStayInInbox(board, ticketless, 'agent'), true);
+  assert.equal(mustStayInInbox(board, ticketless, 'inbox'), false); // staging lane is fine
+  assert.equal(mustStayInInbox(board, { type: 'ticket', refs: { ticket: 'NP-1' } }, 'agent'), false);
+  assert.equal(mustStayInInbox(board, { type: 'pr', refs: {} }, 'done'), false); // GitHub owns PRs
+  assert.equal(mustStayInInbox({ ...board, jira: undefined }, ticketless, 'agent'), false); // no mirror, no rule
+});
+
 test('pushJiraCreate + harvestJiraCreates: promoting a ticketless card files an issue', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mb-jira-'));
   const state = makeState();
@@ -128,17 +137,18 @@ test('pushJiraCreate + harvestJiraCreates: promoting a ticketless card files an 
   // duplicate promote while in flight → no second create
   assert.equal(pushJiraCreate(root, board, state, 'mb-9', 'agent'), null);
   // nothing harvested until the run finishes
-  assert.equal(harvestJiraCreates(root, state), null);
+  assert.equal(harvestJiraCreates(root, board, state), null);
   assert.equal(state.pending_jira_creates.length, 1);
   // simulate the finished create run
   fs.appendFileSync(
     path.join(root, state.pending_jira_creates[0].log),
     JSON.stringify({ type: 'result', subtype: 'success', result: 'NP-500' }) + '\n',
   );
-  const attached = harvestJiraCreates(root, state);
+  const attached = harvestJiraCreates(root, board, state);
   assert.deepEqual(attached, [{ id: 'mb-9', key: 'NP-500' }]);
   assert.equal(state.cards['mb-9'].refs.ticket, 'NP-500');
   assert.equal(state.cards['mb-9'].jira_status, 'In Progress');
+  assert.equal(state.cards['mb-9'].column, 'agent'); // promotion completed once the key landed
   assert.equal(state.pending_jira_creates, undefined);
 });
 

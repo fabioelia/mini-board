@@ -512,6 +512,21 @@ export function harvestJiraSync(root, board, state, now = Date.now()) {
   return null;
 }
 
+// Inbox quarantine: a card with no Jira ticket has no source of truth, so it
+// doesn't get to live outside the staging lane (the board's first column).
+// PR cards are exempt — GitHub owns them (and pr_merged/pr_closed auto-moves
+// must keep working). Enforced on every move path: drag, CLI, triage, flow.
+export function stagingLane(board) {
+  return board.columns[0]?.id ?? null;
+}
+
+export function mustStayInInbox(board, card, target) {
+  const cfg = jiraConfig(board);
+  if (!cfg.enabled) return false;
+  if (!card || card.refs?.ticket || card.type === 'pr') return false;
+  return !!target && target !== stagingLane(board);
+}
+
 // Inbox → Jira: promoting a ticketless card into a status-mapped lane FILES a
 // Jira issue — the board's "once it leaves inbox, it's a ticket" contract.
 // Fire-and-forget spawn; the created key is harvested from the log afterwards
@@ -538,14 +553,14 @@ export function pushJiraCreate(root, board, state, id, targetLane) {
   ].join('\n\n');
   const log = spawnJiraWrite(root, board, `create-${id}`, prompt);
   state.pending_jira_creates ??= [];
-  state.pending_jira_creates.push({ id, log, started: nowIso(), status });
-  logEntry(card, 'jira', `promoted out of inbox — filing a ${cfg.project} ticket at "${status}" (log: ${log})`);
-  return { log, status };
+  state.pending_jira_creates.push({ id, log, started: nowIso(), status, lane: targetLane });
+  logEntry(card, 'jira', `promoting to "${targetLane}" — filing a ${cfg.project} ticket at "${status}" first (log: ${log})`);
+  return { log, status, lane: targetLane };
 }
 
 // Harvest filed tickets: pull the issue key out of each finished create run
 // and attach it to the card. From then on the card is a mirrored Jira card.
-export function harvestJiraCreates(root, state, now = Date.now()) {
+export function harvestJiraCreates(root, board, state, now = Date.now()) {
   const pending = state.pending_jira_creates;
   if (!pending?.length) return null;
   const remaining = [];
@@ -564,6 +579,11 @@ export function harvestJiraCreates(root, state, now = Date.now()) {
         card.origin ??= { source: 'board', key };
         card.jira_status = p.status;
         logEntry(card, 'jira', `filed as ${key} (${p.status})`);
+        // ticket exists now — complete the promotion the guard held back
+        if (p.lane && getColumn(board, p.lane) && card.column !== p.lane && !card.archived) {
+          moveCard(board, state, p.id, p.lane);
+          logEntry(card, 'jira', `ticket landed — promoted to "${p.lane}"`);
+        }
         attached.push({ id: p.id, key });
       } else {
         logEntry(card, 'jira', `ticket creation finished but no issue key in the reply — check ${p.log}`);

@@ -97,11 +97,15 @@ export function buildJiraSyncCommand(board, prompt) {
 }
 
 export function parseIssues(resultText) {
-  let text = String(resultText ?? '').trim();
+  const text = String(resultText ?? '').trim();
+  // Raw text first: a fence INSIDE a JSON string (e.g. a ```yaml block in the
+  // config issue's description) must not be mistaken for a fenced response.
   const fence = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
-  if (fence) text = fence[1].trim();
+  const candidates = [text];
+  if (fence) candidates.push(fence[1].trim());
+  candidates.push(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
   let obj = null;
-  for (const candidate of [text, text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)]) {
+  for (const candidate of candidates) {
     try { obj = JSON.parse(candidate); break; } catch { /* try next */ }
   }
   if (!obj || !Array.isArray(obj.issues)) return { issues: [], statuses: [], config: null, invalid: true };

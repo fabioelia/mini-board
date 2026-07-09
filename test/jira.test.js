@@ -55,6 +55,28 @@ test('parseIssues validates and normalizes', () => {
   assert.equal(parseIssues('junk').invalid, true);
 });
 
+test('parseIssues: raw JSON wins even when a string value embeds a fenced block', () => {
+  // the config issue's description typically carries ```yaml ... ``` — that
+  // inner fence must not be mistaken for a fenced response wrapper
+  const payload = JSON.stringify({
+    statuses: ['To Do', 'In Progress'],
+    config: 'Rules live below.\n\n```yaml\nlanes:\n  "In Progress":\n    max_visits: 2\n```\nKeep open.',
+    issues: [{ key: 'NP-1', summary: 'A', status: 'To Do', url: null, priority: null }],
+  });
+  const res = parseIssues(payload);
+  assert.equal(res.invalid, false);
+  assert.equal(res.issues.length, 1);
+  assert.match(res.config, /```yaml/);
+  assert.deepEqual(res.statuses, ['To Do', 'In Progress']);
+});
+
+test('parseIssues: still unwraps a response fenced in markdown', () => {
+  const fenced = '```json\n' + JSON.stringify({ issues: [{ key: 'NP-2', summary: 'B', status: 'To Do' }] }) + '\n```';
+  const res = parseIssues(fenced);
+  assert.equal(res.invalid, false);
+  assert.equal(res.issues[0].key, 'NP-2');
+});
+
 test('applyIssues: creates new cards in status lane, moves existing, counts unmapped', () => {
   const state = makeState();
   const { created, moved, unmapped } = applyIssues(board, state, [

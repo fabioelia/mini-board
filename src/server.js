@@ -777,6 +777,14 @@ function startPrWatcher(root) {
         errors: results.filter((r) => r.error).length,
         moved: moved.map((r) => ({ id: r.id, to: r.moved })),
       };
+      // syncAll can take a while; background-run markers written by API
+      // requests in the meantime (jira sync, pulls, triage) must survive
+      // this save — re-read them so a stale snapshot doesn't orphan a run.
+      const fresh = loadState(root);
+      for (const key of ['pending_jira', 'pending_pulls', 'pending_triage']) {
+        if (fresh[key] !== undefined) state[key] = fresh[key];
+        else delete state[key];
+      }
       saveState(root, state);
       for (const r of moved) console.log(`watch: ${r.id} auto-moved → ${r.moved}`);
     } catch (err) {

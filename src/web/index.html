@@ -1829,7 +1829,9 @@ function renderSidebar() {
 }
 
 function render() {
-  if (!DATA) return;
+  // never rebuild the DOM mid-drag — it destroys the dragged node and every
+  // drop target, silently killing the drag (dragend re-renders to catch up)
+  if (!DATA || dragId) return;
   const w = DATA.sync_watch;
   const watchTxt = DATA.sync_every === 'off' || DATA.sync_every === false
     ? 'PR watch off'

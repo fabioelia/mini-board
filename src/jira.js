@@ -20,6 +20,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import YAML from 'yaml';
 import { BOARD_FILE, ensureLogDir, loadBoard, logEntry, moveCard, getColumn, createCard, latestSession } from './store.js';
+import { actionsForMove, runAction } from './actions.js';
+import { pushJiraHandoff } from './handoff.js';
 import { extractResultJson, normKey } from './sources.js';
 import { nowIso, shellQuote, claudeFlags } from './util.js';
 
@@ -302,9 +304,10 @@ export function applyIssues(board, state, issues, reconcile = true) {
     if (card.archived) continue; // dismissed on the board — don't resurrect
     card.jira_status = issue.status;
     if (lane && card.column !== lane) {
+      const from = card.column;
       moveCard(board, state, id, lane);
       logEntry(card, 'jira', `Jira status is "${issue.status}" → lane "${lane}"`);
-      moved.push({ id, to: lane, status: issue.status });
+      moved.push({ id, from, to: lane, status: issue.status });
     }
   }
   // Source of truth cuts both ways: a mirrored card whose issue dropped out
@@ -361,6 +364,18 @@ function finishJiraSync(root, board, state, stdout, log = null) {
     if (cfg.config_issue && config) laneCfg = applyLaneConfig(root, board, config, cfg.allow_remote_actions);
   }
   const { created, moved, unmapped, archived } = applyIssues(board, state, issues, cfg.reconcile);
+  // Jira-driven stage changes behave like drags: the target lane's automations
+  // fire (transitioning a ticket to Backlog IN JIRA kicks off the context
+  // build here) and the handoff doc refreshes on the issue. Only for moved
+  // cards — firing on bulk-imported (created) ones would storm dozens of runs.
+  if (!noSpawn()) {
+    for (const m of moved) {
+      for (const action of actionsForMove(board, m.from, m.to)) {
+        runAction(root, board, state, m.id, action, { from: m.from, to: m.to });
+      }
+      pushJiraHandoff(root, board, state, m.id);
+    }
+  }
   const summary = `${issues.length} issue(s): ${created.length} new, ${moved.length} moved${unmapped ? `, ${unmapped} unmapped` : ''}`
     + `${archived.length ? `, ${archived.length} archived (left Jira scope)` : ''}`
     + `${newLanes.length ? ` · ${newLanes.length} lane(s) created from Jira` : ''}`

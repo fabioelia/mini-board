@@ -23,7 +23,21 @@ import {
   runJiraSync, harvestJiraSync, jiraConfig, pushJiraTransition, pushJiraCreate,
   harvestJiraCreates, pushJiraConfig, pushSessionProgress, mustStayInInbox, stagingLane,
 } from './jira.js';
+import { pushJiraHandoff } from './handoff.js';
 import { nowIso, parseDuration } from './util.js';
+
+// PR auto_move landed a card in a new lane: treat it like a drag — fire the
+// target lane's automations, transition the Jira issue, refresh the handoff.
+function afterAutoMoves(root, board, state, results) {
+  for (const r of results) {
+    if (!r.moved) continue;
+    for (const action of actionsForMove(board, r.from, r.moved)) {
+      runAction(root, board, state, r.id, action, { from: r.from, to: r.moved });
+    }
+    if (state.cards[r.id]?.refs?.ticket) pushJiraTransition(root, board, state, r.id, r.moved);
+    pushJiraHandoff(root, board, state, r.id);
+  }
+}
 
 const WEB_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'web');
 
@@ -453,6 +467,7 @@ export function startServer(root, port = 4400) {
         const jiraPush = moved && state.cards[hit.id]?.refs?.ticket
           ? pushJiraTransition(root, board, state, hit.id, column)
           : null;
+        if (moved) pushJiraHandoff(root, board, state, hit.id);
         saveState(root, state);
         json(res, 200, { ok: true, moved, actions: actionResults, jira_push: jiraPush?.pushed ?? null, ...boardPayload(root) });
         return;
@@ -642,6 +657,7 @@ export function startServer(root, port = 4400) {
         } catch (err) {
           return json(res, 500, { error: err.message });
         }
+        afterAutoMoves(root, board, state, results);
         saveState(root, state);
         json(res, 200, { ok: true, results, ...boardPayload(root) });
         return;
@@ -862,6 +878,7 @@ function startPrWatcher(root) {
       const state = loadState(root);
       if (!Object.values(state.cards).some((c) => !c.archived && c.refs?.pr)) return;
       const results = await syncAll(board, state);
+      afterAutoMoves(root, board, state, results);
       const moved = results.filter((r) => r.moved);
       state.sync_watch = {
         last_run: nowIso(),

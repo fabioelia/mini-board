@@ -7,7 +7,8 @@
 
 import { getColumn, moveCard, logEntry } from './store.js';
 import { actionsForMove, runAction } from './actions.js';
-import { pushJiraComment, pushJiraLabel, mustStayInInbox } from './jira.js';
+import { pushJiraComment, pushJiraLabel, mustStayInInbox, pushJiraTransition } from './jira.js';
+import { pushJiraHandoff } from './handoff.js';
 
 const DEFAULT_MAX_VISITS = 2;
 
@@ -87,6 +88,9 @@ export function applyFlow(root, board, state, completed = []) {
     for (const action of actionsForMove(board, from, target)) {
       actions.push(runAction(root, board, state, id, action, { from, to: target }));
     }
+    // flow moves mirror to Jira like drags do: transition + fresh handoff
+    if (card.refs?.ticket) pushJiraTransition(root, board, state, id, target);
+    pushJiraHandoff(root, board, state, id);
     moves.push({ ...res, actions });
   }
   return moves;

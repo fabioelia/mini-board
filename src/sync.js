@@ -108,6 +108,7 @@ export async function syncCard(board, state, id, { exec = defaultExec, autoMove 
   if (changed) logEntry(card, 'sync', `PR is now: ${describe(next)}`);
 
   let moved = null;
+  let movedFrom = null;
   if (autoMove) {
     const targets = board.sync?.auto_move ?? {};
     // precedence: terminal states first, then review outcomes on open PRs
@@ -119,13 +120,14 @@ export async function syncCard(board, state, id, { exec = defaultExec, autoMove 
       : next.state === 'OPEN' && next.review === 'CHANGES_REQUESTED' ? [targets.pr_changes_requested, 'changes requested']
       : [null, null];
     if (target && card.column !== target && board.columns.some((c) => c.id === target)) {
+      movedFrom = card.column;
       moveCard(board, state, id, target);
       logEntry(card, 'sync', `auto-moved to "${target}" (${why})`);
       moved = target;
     }
   }
 
-  return { id, changed, moved, pr: next };
+  return { id, changed, moved, from: movedFrom, pr: next };
 }
 
 export async function syncAll(board, state, opts = {}) {

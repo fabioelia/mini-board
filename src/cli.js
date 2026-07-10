@@ -28,6 +28,7 @@ import {
   runJiraSync, harvestJiraSync, harvestJiraCreates, pushJiraTransition, pushJiraCreate,
   pushJiraConfig, jiraConfig, pushSessionProgress, mustStayInInbox, stagingLane,
 } from './jira.js';
+import { pushJiraHandoff } from './handoff.js';
 
 const HELP = `mini-board — a tiny YAML-driven board for PRs, tickets, and Slack asks
 
@@ -241,6 +242,8 @@ const commands = {
     // board → Jira: dragging a ticketed card transitions the issue
     const jiraPush = card.refs?.ticket ? pushJiraTransition(root, board, state, id, toColumn) : null;
     if (jiraPush?.pushed) console.log(paint.dim(`jira: ${card.refs.ticket} → "${jiraPush.pushed}" (background)`));
+    const handoff = pushJiraHandoff(root, board, state, id);
+    if (handoff) console.log(paint.dim(`handoff → ${card.refs.ticket} (${handoff.mode})`));
     saveState(root, state);
   },
 

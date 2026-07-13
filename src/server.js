@@ -370,7 +370,9 @@ export function startServer(root, port = 4400) {
         if (moved && fire) {
           for (const action of actionsForMove(board, from, column)) {
             const r = runAction(root, board, state, hit.id, action, { from, to: column, message: comment });
-            actionResults.push({ cmd: r.cmd, ok: r.ok, background: !!r.background, error: r.error });
+            // send the fired rule's own name so the client toast names the right
+            // one (source on_leave rules run before target on_enter rules)
+            actionResults.push({ cmd: r.cmd, ok: r.ok, background: !!r.background, error: r.error, name: action.name });
           }
         }
         // board → Jira: dragging into a status-mapped lane transitions the issue

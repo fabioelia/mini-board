@@ -9,15 +9,28 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --accent: #ea580c;
+    --accent-hover: #d24d0a;
+    --accent-deep: #c2410c;
+    --danger: #b91c1c;
+    --border: #e7e3db;
+    --border-soft: #eeebe4;
+    --bg: #f4f2ee;
+    --panel: #fbfaf8;
+    --ink: #1c1a17;
+    --text: #26231f;
+    --dim: #a8a29a;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
   body {
     font-family: 'Hanken Grotesk', system-ui, sans-serif;
-    background: #f4f2ee; color: #1c1a17; -webkit-font-smoothing: antialiased;
+    background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
-  a { color: #ea580c; text-decoration: none; }
-  a:hover { color: #c2410c; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-deep); }
   button { font-family: inherit; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: #d9d5cd; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
@@ -29,22 +42,22 @@
   .app { display: flex; height: 100vh; width: 100%; overflow: hidden; }
 
   /* ---------- sidebar ---------- */
-  .side { width: 236px; flex: 0 0 236px; background: #fbfaf8; border-right: 1px solid #e7e3db; display: flex; flex-direction: column; padding: 18px 14px; }
+  .side { width: 236px; flex: 0 0 236px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 18px 14px; }
   .logo { display: flex; align-items: center; gap: 10px; padding: 6px 8px 18px; }
-  .logo-mark { width: 30px; height: 30px; border-radius: 8px; background: #ea580c; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(234,88,12,0.35); }
+  .logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(234,88,12,0.35); }
   .logo-bars { display: flex; gap: 2.5px; align-items: flex-end; }
   .logo-bars i { display: block; width: 3px; background: #fff; border-radius: 1px; }
   .logo-name { font-weight: 800; font-size: 15px; letter-spacing: -0.02em; }
   .logo-sub { font-size: 11px; color: #97918a; font-weight: 500; }
-  .side-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; color: #a8a29a; text-transform: uppercase; padding: 4px 10px 8px; }
+  .side-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; color: var(--dim); text-transform: uppercase; padding: 4px 10px 8px; }
   .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; font-size: 13px; font-weight: 600; color: #78716c; background: transparent; border: none; border-radius: 9px; padding: 9px 10px; cursor: pointer; margin-bottom: 2px; }
-  .nav-btn .glyph { width: 18px; text-align: center; font-size: 13px; color: #a8a29a; }
+  .nav-btn .glyph { width: 18px; text-align: center; font-size: 13px; color: var(--dim); }
   .nav-btn .lbl { flex: 1; text-align: left; }
-  .nav-btn .badge { font-size: 10.5px; font-weight: 700; color: #a8a29a; background: #eceae4; border-radius: 20px; padding: 1px 7px; }
-  .nav-btn .badge.hot { color: #b91c1c; background: #fbe9e6; }
-  .nav-btn.active { font-weight: 700; color: #26231f; background: #f0ece4; }
-  .nav-btn.active .glyph { color: #ea580c; }
-  .claude-card { border: 1px solid #e7e3db; border-radius: 12px; padding: 12px; background: #fff; }
+  .nav-btn .badge { font-size: 10.5px; font-weight: 700; color: var(--dim); background: #eceae4; border-radius: 20px; padding: 1px 7px; }
+  .nav-btn .badge.hot { color: var(--danger); background: #fbe9e6; }
+  .nav-btn.active { font-weight: 700; color: var(--text); background: #f0ece4; }
+  .nav-btn.active .glyph { color: var(--accent); }
+  .claude-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: #fff; }
   .claude-card .row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .claude-card .dot { width: 8px; height: 8px; border-radius: 50%; }
   .claude-card .dot.ok { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
@@ -52,24 +65,24 @@
   .claude-card .dot.off { background: #c4bfb5; box-shadow: 0 0 0 3px rgba(196,191,181,0.2); }
   .claude-card .row1 b { font-size: 12.5px; font-weight: 700; }
   .claude-card .sub { font-size: 11px; color: #8a847c; line-height: 1.5; }
-  .claude-card button { margin-top: 10px; width: 100%; font-size: 11.5px; font-weight: 600; color: #57534e; background: #f4f2ee; border: 1px solid #e7e3db; border-radius: 7px; padding: 6px; cursor: pointer; }
+  .claude-card button { margin-top: 10px; width: 100%; font-size: 11.5px; font-weight: 600; color: #57534e; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 6px; cursor: pointer; }
   .claude-card button:hover { background: #ece9e2; }
 
   /* ---------- main / views ---------- */
-  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #f4f2ee; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
   .view { display: none; height: 100%; min-height: 0; }
   .view.active { display: flex; flex-direction: column; }
   .view.scroll { display: none; }
   .view.scroll.active { display: block; overflow-y: auto; }
 
-  .board-head { display: flex; align-items: center; gap: 16px; padding: 16px 22px; border-bottom: 1px solid #e7e3db; background: #fbfaf8; }
+  .board-head { display: flex; align-items: center; gap: 16px; padding: 16px 22px; border-bottom: 1px solid var(--border); background: var(--panel); }
   .board-head h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
   .board-head .sub { font-size: 11.5px; color: #97918a; font-weight: 500; margin-top: 1px; }
   .btn { font-size: 12.5px; font-weight: 600; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
-  .btn-ghost { color: #57534e; background: #fff; border: 1px solid #e7e3db; }
-  .btn-ghost:hover { background: #f4f2ee; }
-  .btn-accent { display: flex; align-items: center; gap: 7px; color: #fff; background: #ea580c; border: none; padding: 8px 14px; box-shadow: 0 2px 6px rgba(234,88,12,0.28); }
-  .btn-accent:hover { background: #d24d0a; }
+  .btn-ghost { color: #57534e; background: #fff; border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn-accent { display: flex; align-items: center; gap: 7px; color: #fff; background: var(--accent); border: none; padding: 8px 14px; box-shadow: 0 2px 6px rgba(234,88,12,0.28); }
+  .btn-accent:hover { background: var(--accent-hover); }
   .btn-accent .dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
   .btn:disabled { opacity: .55; cursor: default; }
 
@@ -79,18 +92,18 @@
   .lane { width: 274px; flex: 0 0 274px; display: flex; flex-direction: column; min-height: 0; }
   .lane-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 10px; }
   .lane-edit { border: none; background: transparent; color: #c4bfb5; font-size: 12px; cursor: pointer; padding: 0 2px; opacity: 0; transition: opacity 0.12s; }
-  .lane-head:hover .lane-edit { opacity: 1; }
-  .lane-edit:hover { color: #ea580c; }
+  .lane-head:hover .lane-edit, .lane-head:focus-within .lane-edit, .lane-edit:focus-visible { opacity: 1; }
+  .lane-edit:hover { color: var(--accent); }
   .lane-dot { width: 9px; height: 9px; border-radius: 3px; }
   .lane-name { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
-  .lane-count { font-size: 11px; font-weight: 600; color: #a8a29a; background: #eceae4; border-radius: 20px; padding: 1px 7px; }
+  .lane-count { font-size: 11px; font-weight: 600; color: var(--dim); background: #eceae4; border-radius: 20px; padding: 1px 7px; }
   .lane-auto { display: flex; align-items: center; gap: 6px; margin: 0 2px 10px; padding: 6px 9px; background: #fdf5ee; border: 1px solid #f6e2d0; border-radius: 8px; }
-  .lane-auto .k { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: #ea580c; white-space: nowrap; }
+  .lane-auto .k { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: var(--accent); white-space: nowrap; }
   .lane-auto .v { font-size: 11px; color: #9a6a3f; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lane-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; padding: 8px; margin: 0 -4px; border-radius: 12px; outline: 1.5px dashed transparent; transition: background 0.12s, outline-color 0.12s; }
   .lane-body.over { background: #fdf3ea; outline-color: #f0a868; }
-  .add-lane { width: 172px; flex: 0 0 172px; align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: #a8a29a; background: transparent; border: 1.5px dashed #d9d5cd; border-radius: 12px; padding: 14px; cursor: pointer; }
-  .add-lane:hover { border-color: #ea580c; color: #ea580c; }
+  .add-lane { width: 172px; flex: 0 0 172px; align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--dim); background: transparent; border: 1.5px dashed #d9d5cd; border-radius: 12px; padding: 14px; cursor: pointer; }
+  .add-lane:hover { border-color: var(--accent); color: var(--accent); }
 
   .ticket { background: #fff; border: 1px solid #eae6de; border-radius: 11px; padding: 12px 13px; cursor: grab; box-shadow: 0 1px 2px rgba(28,26,23,0.04); transition: box-shadow 0.15s, border-color 0.15s, opacity 0.12s; user-select: none; }
   .ticket:hover { border-color: #d6d1c8; box-shadow: 0 4px 14px rgba(28,26,23,0.09); }
@@ -99,16 +112,16 @@
   .type-chip { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; border-radius: 5px; padding: 2px 7px; text-transform: uppercase; }
   .src-badge { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; border-radius: 5px; padding: 2px 5px; letter-spacing: 0.02em; }
   .ticket .ref { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #b0aaa1; margin-left: auto; }
-  .ticket .title { font-size: 13px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; color: #26231f; }
+  .ticket .title { font-size: 13px; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; color: var(--text); }
   .ticket .foot { display: flex; align-items: center; gap: 7px; margin-top: 11px; }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
   .status-dot.pulse { animation: pulseDot 1.4s infinite; }
   .ticket .status-lbl { font-size: 11px; font-weight: 600; }
   .ticket .when { font-size: 10.5px; color: #b0aaa1; font-weight: 500; margin-left: auto; }
 
-  .activity { width: 296px; flex: 0 0 296px; border-left: 1px solid #e7e3db; background: #fbfaf8; display: flex; flex-direction: column; }
+  .activity { width: 296px; flex: 0 0 296px; border-left: 1px solid var(--border); background: var(--panel); display: flex; flex-direction: column; }
   .activity.hidden { display: none; }
-  .activity-head { padding: 16px 18px 12px; border-bottom: 1px solid #e7e3db; display: flex; align-items: center; gap: 8px; }
+  .activity-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
   .activity-head b { font-size: 13px; font-weight: 700; }
   .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulseDot 1.6s infinite; margin-left: auto; }
   .activity-head .live { font-size: 10.5px; color: #97918a; font-weight: 600; }
@@ -118,7 +131,7 @@
   .ev .icon { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 4px; min-width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex: 0 0 22px; }
   .ev .text { font-size: 12px; line-height: 1.45; color: #3a3630; }
   .ev .meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-  .ev .rule { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: #ea580c; background: #fdf1e8; border-radius: 4px; padding: 1px 5px; }
+  .ev .rule { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: var(--accent); background: #fdf1e8; border-radius: 4px; padding: 1px 5px; }
   .ev .when { font-size: 10px; color: #b0aaa1; }
 
   /* ---------- page views (sources / automations / connection) ---------- */
@@ -126,9 +139,9 @@
   .page-head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
   .page-head .sub { font-size: 13px; color: #8a847c; margin-top: 3px; }
   .page-body { max-width: 1000px; padding: 18px 30px 40px; }
-  .sec-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #a8a29a; text-transform: uppercase; margin-bottom: 12px; }
+  .sec-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--dim); text-transform: uppercase; margin-bottom: 12px; }
   .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 14px; }
-  .tool-card { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; padding: 16px; }
+  .tool-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
   .tool-card .row1 { display: flex; align-items: center; gap: 12px; }
   .tool-badge { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; border-radius: 9px; padding: 8px 9px; flex: 0 0 auto; }
   .tool-card .nm { font-size: 14px; font-weight: 700; }
@@ -142,58 +155,56 @@
   .tool-card .scope .v { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #57534e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .add-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 32px; }
   .add-chip { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #78716c; background: #fff; border: 1.5px dashed #d9d5cd; border-radius: 10px; padding: 9px 13px; cursor: pointer; }
-  .add-chip:hover { border-color: #ea580c; color: #ea580c; }
-  .add-chip .short { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #a8a29a; }
+  .add-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .add-chip .short { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--dim); }
 
-  .prompt-card { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
-  .prompt-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; background: #faf8f5; border-bottom: 1px solid #eeebe4; }
-  .prompt-head .d { width: 7px; height: 7px; border-radius: 50%; background: #ea580c; flex: 0 0 7px; }
+  .prompt-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+  .prompt-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; background: #faf8f5; border-bottom: 1px solid var(--border-soft); }
+  .prompt-head .d { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: 0 0 7px; }
   .prompt-head b { font-size: 12px; font-weight: 700; }
   .prompt-head .meta { font-size: 11px; color: #97918a; margin-left: auto; }
   .prompt-card textarea { width: 100%; min-height: 110px; resize: vertical; border: none; outline: none; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #3a3630; background: #fff; display: block; }
-  .prompt-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #faf8f5; border-top: 1px solid #eeebe4; }
+  .prompt-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #faf8f5; border-top: 1px solid var(--border-soft); }
   .prompt-foot .last { font-size: 11.5px; color: #8a847c; }
   .prompt-foot .last b { color: #3a3630; }
   .prompt-foot .sp { flex: 1; }
   /* source activity / run history panel */
-  .src-activity { border-top: 1px solid #eeebe4; background: #fbfaf8; padding: 12px 14px; }
-  .src-activity .act-h { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #a8a29a; margin: 10px 0 6px; }
+  .src-activity { border-top: 1px solid var(--border-soft); background: var(--panel); padding: 12px 14px; }
+  .src-activity .act-h { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); margin: 10px 0 6px; }
   .src-activity .act-h:first-child { margin-top: 0; }
   .act-run { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #57534e; padding: 3px 0; }
   .act-run .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .act-run .dot.ok { background: #16a34a; } .act-run .dot.error { background: #dc2626; }
-  .act-run .dim { color: #a8a29a; }
-  .act-feed { max-height: 260px; overflow-y: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.7; color: #57534e; background: #fff; border: 1px solid #eeebe4; border-radius: 8px; padding: 8px 10px; }
+  .act-run .dot.ok { background: #16a34a; } .act-run .dot.error { background: var(--danger); }
+  .act-run .dim { color: var(--dim); }
+  .act-feed { max-height: 260px; overflow-y: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; line-height: 1.7; color: #57534e; background: #fff; border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 10px; }
   .act-ev { white-space: pre-wrap; word-break: break-word; }
-  .act-ev.init { color: #0d9488; } .act-ev.tool { color: #1d4ed8; } .act-ev.tool_result { color: #a8a29a; }
+  .act-ev.init { color: #0d9488; } .act-ev.tool { color: #1d4ed8; } .act-ev.tool_result { color: var(--dim); }
   .act-ev.text { color: #78716c; font-style: italic; } .act-ev.result { color: #16a34a; font-weight: 600; }
-  .act-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #c2410c; }
-  .act-live .d { width: 6px; height: 6px; border-radius: 50%; background: #ea580c; animation: pulseDot 1.4s infinite; }
+  .act-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--accent-deep); }
+  .act-live .d { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulseDot 1.4s infinite; }
   .btn-sm { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
-  .btn-sm.ghost { color: #57534e; background: #fff; border: 1px solid #e7e3db; }
-  .btn-sm.ghost:hover { background: #f4f2ee; }
-  .btn-sm.accent { color: #fff; background: #ea580c; border: none; padding: 7px 14px; }
-  .btn-sm.accent:hover { background: #d24d0a; }
+  .btn-sm.ghost { color: #57534e; background: #fff; border: 1px solid var(--border); }
+  .btn-sm.ghost:hover { background: var(--bg); }
+  .btn-sm.accent { color: #fff; background: var(--accent); border: none; padding: 7px 14px; }
+  .btn-sm.accent:hover { background: var(--accent-hover); }
   .chips { display: flex; gap: 4px; align-items: center; }
   .tag-chip { font-size: 10.5px; font-weight: 600; color: #78716c; background: #eceae4; border-radius: 5px; padding: 1px 6px; }
 
-  .rule-card { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+  .rule-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
   .rule-row1 { display: flex; align-items: center; gap: 10px; }
-  .lane-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #3a3630; background: #f4f2ee; border: 1px solid #e7e3db; border-radius: 7px; padding: 4px 9px; }
+  .lane-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #3a3630; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 4px 9px; }
   .lane-chip .d { width: 8px; height: 8px; border-radius: 3px; }
   .rule-arrow { color: #c4bfb5; font-size: 14px; }
   .rule-status { font-size: 11.5px; font-weight: 700; color: #15803d; margin-left: auto; }
-  .toggle { width: 34px; height: 20px; border-radius: 20px; background: #ea580c; position: relative; flex: 0 0 34px; }
-  .toggle i { position: absolute; top: 2px; left: 16px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
   .rule-row2 { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; }
-  .rule-row2 b { font-size: 13px; font-weight: 700; color: #26231f; }
-  .trig-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #ea580c; background: #fdf1e8; border-radius: 4px; padding: 1px 6px; }
-  .rule-action { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65; color: #57534e; background: #faf8f5; border: 1px solid #eeebe4; border-radius: 9px; padding: 12px 14px; word-break: break-all; }
-  .add-dashed { align-self: flex-start; font-size: 12.5px; font-weight: 600; color: #a8a29a; background: transparent; border: 1.5px dashed #d9d5cd; border-radius: 11px; padding: 12px 18px; cursor: pointer; }
-  .add-dashed:hover { border-color: #ea580c; color: #ea580c; }
+  .rule-row2 b { font-size: 13px; font-weight: 700; color: var(--text); }
+  .trig-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: var(--accent); background: #fdf1e8; border-radius: 4px; padding: 1px 6px; }
+  .rule-action { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65; color: #57534e; background: #faf8f5; border: 1px solid var(--border-soft); border-radius: 9px; padding: 12px 14px; word-break: break-all; }
+  .add-dashed { align-self: flex-start; font-size: 12.5px; font-weight: 600; color: var(--dim); background: transparent; border: 1.5px dashed #d9d5cd; border-radius: 11px; padding: 12px 18px; cursor: pointer; }
+  .add-dashed:hover { border-color: var(--accent); color: var(--accent); }
 
-  .conn-card { display: flex; gap: 16px; background: #fff; border: 1px solid #e7e3db; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
-  .conn-mark { width: 52px; height: 52px; border-radius: 13px; background: #1c1a17; display: flex; align-items: center; justify-content: center; flex: 0 0 52px; color: #ea580c; font-weight: 800; font-size: 18px; }
+  .conn-card { display: flex; gap: 16px; background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+  .conn-mark { width: 52px; height: 52px; border-radius: 13px; background: var(--ink); display: flex; align-items: center; justify-content: center; flex: 0 0 52px; color: var(--accent); font-weight: 800; font-size: 18px; }
   .conn-card .nm-row { display: flex; align-items: center; gap: 10px; }
   .conn-card .nm { font-size: 16px; font-weight: 800; }
   .conn-card .detail { font-size: 12.5px; color: #8a847c; margin-top: 3px; word-break: break-all; }
@@ -201,61 +212,61 @@
   .stats { display: flex; gap: 22px; margin-top: 16px; }
   .stat .n { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
   .stat .l { font-size: 11px; color: #97918a; font-weight: 600; }
-  .sess-list { background: #fff; border: 1px solid #e7e3db; border-radius: 14px; overflow: hidden; }
+  .sess-list { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
   .sess-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid #f0ede7; cursor: pointer; }
   .sess-row:hover { background: #faf8f5; }
   .sess-row:last-child { border-bottom: none; }
   .sess-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
-  .sess-row .t { font-size: 13px; font-weight: 600; color: #26231f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sess-row .m { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #a8a29a; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess-row .t { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess-row .m { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sess-row .st { font-size: 11.5px; font-weight: 600; flex: 0 0 auto; }
   .sess-row .wh { font-size: 11px; color: #b0aaa1; width: 64px; text-align: right; flex: 0 0 64px; }
 
   /* ---------- drawer ---------- */
   #overlay { position: fixed; inset: 0; background: rgba(28,26,23,0.28); z-index: 40; backdrop-filter: blur(1.5px); display: none; }
-  #drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 92vw; background: #fbfaf8; border-left: 1px solid #e7e3db; z-index: 41; display: none; flex-direction: column; box-shadow: -16px 0 44px rgba(28,26,23,0.16); }
+  #drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 92vw; background: var(--panel); border-left: 1px solid var(--border); z-index: 41; display: none; flex-direction: column; box-shadow: -16px 0 44px rgba(28,26,23,0.16); }
   #overlay.open { display: block; }
   #drawer.open { display: flex; }
-  .dw-head { padding: 18px 22px; border-bottom: 1px solid #e7e3db; }
+  .dw-head { padding: 18px 22px; border-bottom: 1px solid var(--border); }
   .dw-chips { display: flex; align-items: center; gap: 8px; }
-  .dw-close { width: 28px; height: 28px; font-size: 15px; color: #8a847c; background: #f4f2ee; border: 1px solid #e7e3db; border-radius: 7px; cursor: pointer; margin-left: auto; }
+  .dw-close { width: 28px; height: 28px; font-size: 15px; color: #8a847c; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; cursor: pointer; margin-left: auto; }
   .dw-close:hover { background: #ece9e2; }
   .dw-title { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; margin-top: 12px; line-height: 1.3; }
   .dw-meta { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
   .dw-meta .item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #78716c; font-weight: 500; }
   .dw-meta .item .d { width: 8px; height: 8px; border-radius: 3px; }
-  .dw-meta .dim { font-size: 11.5px; color: #a8a29a; }
+  .dw-meta .dim { font-size: 11.5px; color: var(--dim); }
   .dw-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
-  .dw-desc { font-size: 12.5px; line-height: 1.6; color: #4a453f; background: #fff; border: 1px solid #eeebe4; border-radius: 11px; padding: 14px 16px; }
+  .dw-desc { font-size: 12.5px; line-height: 1.6; color: #4a453f; background: #fff; border: 1px solid var(--border-soft); border-radius: 11px; padding: 14px 16px; }
   .dw-desc a { word-break: break-all; }
-  .dw-attn { font-size: 12.5px; line-height: 1.7; color: #b91c1c; background: #fbe9e6; border: 1px solid #f5d2cc; border-radius: 11px; padding: 12px 16px; margin-top: 12px; }
+  .dw-attn { font-size: 12.5px; line-height: 1.7; color: var(--danger); background: #fbe9e6; border: 1px solid #f5d2cc; border-radius: 11px; padding: 12px 16px; margin-top: 12px; }
   .dw-sec { display: flex; align-items: center; gap: 8px; margin: 22px 0 12px; }
   .dw-sec .k { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: #78716c; text-transform: uppercase; }
   .dw-sec .id { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #b0aaa1; }
-  .dw-sec .line { flex: 1; height: 1px; background: #eeebe4; }
+  .dw-sec .line { flex: 1; height: 1px; background: var(--border-soft); }
   .msgs { display: flex; flex-direction: column; gap: 10px; }
   .msg { border-radius: 10px; padding: 10px 12px; border: 1px solid transparent; }
   .msg .role { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
   .msg .txt { font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
-  .msg.you { background: #fdf3ea; border-color: #f6dcc4; } .msg.you .role { color: #c2410c; } .msg.you .txt { color: #3a3630; }
-  .msg.agent { background: #fff; border-color: #eeebe4; } .msg.agent .role { color: #57534e; } .msg.agent .txt { color: #3a3630; }
-  .msg.system { background: transparent; } .msg.system .role { color: #a8a29a; } .msg.system .txt { color: #8a847c; }
-  .msg.tool { background: #1c1a17; border-color: #1c1a17; } .msg.tool .role { color: #f0a868; }
+  .msg.you { background: #fdf3ea; border-color: #f6dcc4; } .msg.you .role { color: var(--accent-deep); } .msg.you .txt { color: #3a3630; }
+  .msg.agent { background: #fff; border-color: var(--border-soft); } .msg.agent .role { color: #57534e; } .msg.agent .txt { color: #3a3630; }
+  .msg.system { background: transparent; } .msg.system .role { color: var(--dim); } .msg.system .txt { color: #8a847c; }
+  .msg.tool { background: var(--ink); border-color: var(--ink); } .msg.tool .role { color: #f0a868; }
   .msg.tool .txt { color: #d9d5cd; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-  .msg.source { background: #f4f2ee; border-color: #e7e3db; } .msg.source .role { color: #78716c; } .msg.source .txt { color: #57534e; }
-  .dw-foot { border-top: 1px solid #e7e3db; padding: 14px 18px; background: #fbfaf8; }
+  .msg.source { background: var(--bg); border-color: var(--border); } .msg.source .role { color: #78716c; } .msg.source .txt { color: #57534e; }
+  .dw-foot { border-top: 1px solid var(--border); padding: 14px 18px; background: var(--panel); }
   .composer { display: flex; align-items: flex-end; gap: 10px; background: #fff; border: 1px solid #e0dcd3; border-radius: 12px; padding: 8px 8px 8px 14px; }
-  .composer textarea { flex: 1; resize: none; border: none; outline: none; font-family: inherit; font-size: 13px; line-height: 1.5; color: #26231f; background: transparent; min-height: 22px; max-height: 120px; padding: 5px 0; }
-  .composer .send { font-size: 12.5px; font-weight: 700; color: #fff; background: #ea580c; border: none; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
-  .composer .send:hover { background: #d24d0a; }
+  .composer textarea { flex: 1; resize: none; border: none; outline: none; font-family: inherit; font-size: 13px; line-height: 1.5; color: var(--text); background: transparent; min-height: 22px; max-height: 120px; padding: 5px 0; }
+  .composer .send { font-size: 12.5px; font-weight: 700; color: #fff; background: var(--accent); border: none; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
+  .composer .send:hover { background: var(--accent-hover); }
   .dw-caption { display: flex; align-items: center; font-size: 10.5px; color: #b0aaa1; margin-top: 7px; padding-left: 2px; }
   .dw-caption .acts { margin-left: auto; display: flex; gap: 10px; }
   .dw-caption .acts button { font-size: 10.5px; font-weight: 600; color: #8a847c; background: none; border: none; cursor: pointer; padding: 0; }
-  .dw-caption .acts button:hover { color: #ea580c; }
+  .dw-caption .acts button:hover { color: var(--accent); }
 
   /* ---------- toasts ---------- */
   #toasts { position: fixed; right: 22px; bottom: 22px; z-index: 60; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
-  .toast { animation: toastIn 0.28s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: 11px; width: 340px; background: #1c1a17; color: #f4f2ee; border-radius: 12px; padding: 13px 15px; box-shadow: 0 12px 34px rgba(28,26,23,0.32); }
+  .toast { animation: toastIn 0.28s cubic-bezier(0.2,0.8,0.2,1); display: flex; gap: 11px; width: 340px; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 13px 15px; box-shadow: 0 12px 34px rgba(28,26,23,0.32); }
   .toast .ic { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 7px; background: rgba(234,88,12,0.22); display: flex; align-items: center; justify-content: center; font-size: 13px; }
   .toast .hd { font-size: 12.5px; font-weight: 700; }
   .toast .bd { font-size: 11.5px; color: #c9c4bc; line-height: 1.5; margin-top: 3px; word-break: break-word; }
@@ -263,15 +274,30 @@
   /* ---------- modals ---------- */
   .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 50; background: rgba(28,26,23,0.28); backdrop-filter: blur(1.5px); }
   .modal.open { display: flex; }
-  .modal .box { background: #fbfaf8; border: 1px solid #e7e3db; border-radius: 16px; padding: 20px; width: min(520px, 92vw); box-shadow: 0 24px 60px rgba(28,26,23,0.22); }
+  .modal .box { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; width: min(520px, 92vw); box-shadow: 0 24px 60px rgba(28,26,23,0.22); }
   .modal h3 { margin: 0 0 14px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
-  .modal input, .modal textarea, .modal select { width: 100%; background: #fff; color: #26231f; border: 1px solid #e0dcd3; border-radius: 9px; padding: 8px 11px; font-family: inherit; font-size: 13px; margin-bottom: 9px; outline: none; }
-  .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: #ea580c; }
+  .modal input, .modal textarea, .modal select { width: 100%; background: #fff; color: var(--text); border: 1px solid #e0dcd3; border-radius: 9px; padding: 8px 11px; font-family: inherit; font-size: 13px; margin-bottom: 9px; outline: none; }
+  .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--accent); }
   .modal textarea { resize: vertical; min-height: 74px; }
   .modal .row { display: flex; gap: 9px; }
   .modal .row > * { flex: 1; }
   .modal label.cb { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: #57534e; font-weight: 500; margin: 0 10px 9px 0; }
   .modal label.cb input { width: auto; margin: 0; }
+
+  /* ---------- narrow viewports ---------- */
+  /* Below ~1000px the sidebar + board + activity rail no longer fit; collapse
+     the sidebar to icons and drop the activity rail so the board stays usable. */
+  @media (max-width: 1000px) {
+    .side { width: 60px; flex-basis: 60px; padding: 18px 8px; }
+    .side .logo-name, .side .logo-sub, .side-label,
+    .nav-btn .lbl, .nav-btn .badge, .claude-card { display: none; }
+    .nav-btn { justify-content: center; }
+    .activity { display: none; }
+  }
+  @media (max-width: 640px) {
+    .lanes-scroll { padding: 12px; }
+    .page-head, .page-body { padding-left: 16px; padding-right: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -477,7 +503,7 @@
 
 <!-- TICKET DRAWER -->
 <div id="overlay"></div>
-<div id="drawer">
+<div id="drawer" role="dialog" aria-modal="true" aria-labelledby="dw-title">
   <div class="dw-head">
     <div class="dw-chips" id="dw-chips"></div>
     <div class="dw-title" id="dw-title"></div>
@@ -510,8 +536,8 @@
 
 <!-- ADD CARD MODAL -->
 <div class="modal" id="modal-card">
-  <div class="box">
-    <h3>New card</h3>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="m-heading">
+    <h3 id="m-heading">New card</h3>
     <input id="m-title" placeholder="Title" />
     <div class="row">
       <select id="m-type">
@@ -537,7 +563,7 @@
 
 <!-- RUN VIEWER MODAL -->
 <div class="modal" id="modal-run">
-  <div class="box" style="width:min(700px,94vw)">
+  <div class="box" style="width:min(700px,94vw)" role="dialog" aria-modal="true" aria-labelledby="run-heading">
     <h3 id="run-heading">Run</h3>
     <div class="src-activity" id="run-body" style="border:1px solid #eeebe4;border-radius:10px;margin-bottom:12px;max-height:60vh;overflow-y:auto"></div>
     <div class="row">
@@ -548,7 +574,7 @@
 
 <!-- LANE MODAL -->
 <div class="modal" id="modal-lane">
-  <div class="box">
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="l-heading">
     <h3 id="l-heading">New lane</h3>
     <input id="l-title" placeholder="Title (e.g. In Review)" />
     <div class="row">
@@ -583,7 +609,7 @@
 
 <!-- AUTOMATION MODAL -->
 <div class="modal" id="modal-rule">
-  <div class="box">
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="r-heading">
     <h3 id="r-heading">New automation</h3>
     <input id="r-name" placeholder="Name (optional, e.g. fire agent)" />
     <textarea id="r-run" spellcheck="false" placeholder="Shell command — e.g. claude -p {{prompt}} --output-format json&#10;Placeholders: {{prompt}} {{message}} {{card.pr}} {{card.ticket}} {{card.session}}"></textarea>
@@ -609,7 +635,7 @@
 
 <!-- CONNECTOR SETUP MODAL -->
 <div class="modal" id="modal-conn">
-  <div class="box">
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="c-heading">
     <h3 id="c-heading">Connect</h3>
     <div id="c-desc" style="font-size:12.5px;color:#78716c;line-height:1.55;margin-bottom:12px"></div>
     <div id="c-env"></div>
@@ -624,7 +650,7 @@
 
 <!-- SOURCE MODAL -->
 <div class="modal" id="modal-src">
-  <div class="box">
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="s-heading">
     <h3 id="s-heading">New source</h3>
     <input id="s-title" placeholder="Title (e.g. Slack user feedback)" />
     <textarea id="s-prompt" placeholder='Prompt — e.g. "Look at the #user-feedback channel in Slack and find issues reported in the past 24 hours"'></textarea>
@@ -643,7 +669,7 @@
   </div>
 </div>
 
-<div id="toasts"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
 
 <script>
 let DATA = null;
@@ -657,6 +683,11 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+// Only http(s) URLs are safe to place in an href. External content (PR/ticket/
+// Slack bodies, agent-picked links) can smuggle javascript:/data: schemes.
+const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u) ? u : null);
+// External links always open new tabs; noopener/noreferrer blocks tabnabbing.
+const extLink = (url, label) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
 
 const TYPE_META = {
   pr:     { label: 'PR',     color: '#6d28d9', bg: '#f0eafb' },
@@ -692,6 +723,15 @@ async function api(path, body) {
   return data;
 }
 
+// Double-submit guard for mutation buttons: disables the button and returns a
+// release fn, or null if it's already in flight (so the handler can bail).
+function claim(sel) {
+  const b = $(sel);
+  if (!b || b.disabled) return null;
+  b.disabled = true;
+  return () => { b.disabled = false; };
+}
+
 function toast(head, body, ms = 5200) {
   const el = document.createElement('div');
   el.className = 'toast';
@@ -714,7 +754,7 @@ function refLinkChips(c) {
   const out = [];
   for (const [which, label] of [['pr', 'PR'], ['ticket', c.refs?.ticket || 'Ticket'], ['slack', 'Slack']]) {
     const url = refUrl(c, which);
-    if (url) out.push(`<a href="${esc(url)}" target="_blank">${esc(label)} ↗</a>`);
+    if (url) out.push(extLink(url, `${label} ↗`));
     else if (c.refs?.[which]) out.push(esc(c.refs[which]));
   }
   return out;
@@ -746,7 +786,7 @@ function ticketHtml(c) {
   const tm = TYPE_META[c.type] || TYPE_META.task;
   const sm = srcMeta(c);
   const st = cardStatus(c);
-  return `<div class="ticket${dragId === c.id ? ' dragging' : ''}" draggable="true" data-id="${c.id}">
+  return `<div class="ticket${dragId === c.id ? ' dragging' : ''}" draggable="true" data-id="${c.id}" role="button" tabindex="0" aria-label="Open card: ${esc(c.title)}">
     <div class="top">
       <span class="type-chip" style="color:${tm.color};background:${tm.bg}">${tm.label}</span>
       ${sm ? `<span class="src-badge" style="color:${sm.color};background:${sm.bg}">${esc(sm.short)}</span>` : ''}
@@ -754,7 +794,7 @@ function ticketHtml(c) {
         const which = c.refs?.pr ? 'pr' : c.refs?.ticket ? 'ticket' : c.refs?.slack ? 'slack' : null;
         const url = which && refUrl(c, which);
         return url
-          ? `<a class="ref" href="${esc(url)}" target="_blank" onclick="event.stopPropagation()" style="color:inherit">${esc(cardRef(c))} ↗</a>`
+          ? `<a class="ref" href="${esc(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:inherit">${esc(cardRef(c))} ↗</a>`
           : `<span class="ref">${esc(cardRef(c))}</span>`;
       })()}
     </div>
@@ -788,6 +828,9 @@ function renderBoard() {
 
   $$('#lanes .ticket').forEach((el) => {
     el.addEventListener('click', () => openDrawer(el.dataset.id));
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(el.dataset.id); }
+    });
     el.addEventListener('dragstart', (e) => {
       dragId = el.dataset.id;
       el.classList.add('dragging');
@@ -809,12 +852,13 @@ function renderBoard() {
         const res = await api('/api/move', { card: id, column: target });
         DATA = res; render();
         const acts = (res.actions || []).filter(Boolean);
-        const col = DATA.board.columns.find((c) => c.id === target);
-        const ruleName = col?.on_enter?.[0]?.name;
         if (acts.length) {
           const bad = acts.find((a) => a.error || a.ok === false);
-          if (bad) toast('Automation failed', bad.error || bad.cmd);
-          else toast(`Automation fired · ${ruleName || 'on enter'}`, `“${card.title}” — ${acts[0].background ? 'agent launched in background' : 'action ran'}.`);
+          if (bad) toast('Automation failed', bad.name ? `${bad.name} — ${bad.error || bad.cmd}` : (bad.error || bad.cmd));
+          else {
+            const fired = acts[0]; // server orders these as they actually ran
+            toast(`Automation fired · ${fired.name || 'automation'}`, `“${card.title}” — ${fired.background ? 'agent launched in background' : 'action ran'}.`);
+          }
         }
       } catch (err) { toast('Move failed', err.message); }
     });
@@ -848,7 +892,7 @@ function renderActivity() {
   events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   $('#activity-list').innerHTML = events.slice(0, 40).map((e) => {
     const m = EV_META[e.kind] || EV_META.move;
-    return `<div class="ev" data-card="${e.cardId}">
+    return `<div class="ev" data-card="${e.cardId}" role="button" tabindex="0">
       <span class="icon" style="color:${m.color};background:${m.bg}">${m.icon}</span>
       <div style="flex:1;min-width:0">
         <div class="text">${esc(e.text)} — “${esc(e.cardTitle)}”</div>
@@ -856,7 +900,11 @@ function renderActivity() {
       </div>
     </div>`;
   }).join('') || '<div style="padding:16px 4px;font-size:12px;color:#a8a29a">No activity yet — pull a source or move a card.</div>';
-  $$('#activity-list .ev').forEach((el) => el.addEventListener('click', () => openDrawer(el.dataset.card)));
+  $$('#activity-list .ev').forEach((el) => {
+    const open = () => openDrawer(el.dataset.card);
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+  });
 }
 
 /* ---------- sources page ---------- */
@@ -903,6 +951,13 @@ function renderSources() {
     }
   }));
 
+  // Don't rebuild the prompt cards out from under an in-progress edit — the
+  // background poll would otherwise wipe unsaved keystrokes (the triage/jira/
+  // surface panels guard the same way). Skip while a prompt textarea is focused
+  // or holds unsaved text; the existing DOM + listeners stay live.
+  const promptsEditing = $('#prompt-cards').contains(document.activeElement)
+    || $$('#prompt-cards textarea').some((t) => t.value.trim() !== t.dataset.orig);
+  if (!promptsEditing) {
   $('#prompt-cards').innerHTML = setup.sources.map((s) => {
     const st = s.status || {};
     const busy = s.pulling || st.last_status === 'running';
@@ -958,6 +1013,7 @@ function renderSources() {
       renderSources();
     });
   });
+  }
 
   // restore the open activity panel across re-renders
   if (activityOpen) {
@@ -973,9 +1029,12 @@ function renderSources() {
 /* ---------- source activity feed ---------- */
 let activityOpen = null; // source id whose activity panel is expanded
 
+let activityLoading = false;
 async function loadActivity(id) {
+  if (activityLoading) return; // the 3s poll must not stack requests / apply out of order
   const panel = document.querySelector(`.prompt-card[data-src="${CSS.escape(id)}"] .src-activity`);
   if (!panel) return;
+  activityLoading = true;
   try {
     const d = await api(`/api/source/activity?source=${encodeURIComponent(id)}`);
     const hist = (d.history || []).map((h) => {
@@ -997,7 +1056,7 @@ async function loadActivity(id) {
     if (d.running) feedEl.scrollTop = feedEl.scrollHeight; // follow the tail live
   } catch (err) {
     panel.innerHTML = `<div class="act-run"><span class="dot error"></span>${esc(err.message)}</div>`;
-  }
+  } finally { activityLoading = false; }
 }
 
 // live-follow: refresh the open feed while its source is pulling
@@ -1225,7 +1284,7 @@ function renderConnection() {
       : r.latest ? { l: 'latest', c: '#0f766e', d: '#0d9488', pulse: false }
       : { l: 'idle', c: '#a8a29a', d: '#c4bfb5', pulse: false };
     const nav = r.board_run ? `data-run-kind="${r.board_run.kind}" data-run-id="${esc(r.board_run.id ?? '')}" data-run-title="${esc(r.board_run.title)}"` : `data-card="${r.card.id}"`;
-    return `<div class="sess-row" ${nav}>
+    return `<div class="sess-row" ${nav} role="button" tabindex="0">
       <span class="sess-dot${st2.pulse ? ' pulse' : ''}" style="background:${st2.d};${st2.pulse ? 'animation:pulseDot 1.4s infinite;' : ''}"></span>
       <div style="flex:1;min-width:0">
         <div class="t">${esc(r.board_run ? r.board_run.title : r.card.title)}</div>
@@ -1235,10 +1294,14 @@ function renderConnection() {
       <span class="wh">${r.sess.at ? ago(r.sess.at) : ''}</span>
     </div>`;
   }).join('') || '<div style="padding:16px;font-size:12.5px;color:#a8a29a">No Claude sessions yet — drag a card into an agent lane or use “New agent” in a card.</div>';
-  $$('#sess-list .sess-row').forEach((el) => el.addEventListener('click', () => {
-    if (el.dataset.card) { setView('board'); openDrawer(el.dataset.card); }
-    else if (el.dataset.runKind) openRunModal(el.dataset.runKind, el.dataset.runId || null, el.dataset.runTitle);
-  }));
+  $$('#sess-list .sess-row').forEach((el) => {
+    const open = () => {
+      if (el.dataset.card) { setView('board'); openDrawer(el.dataset.card); }
+      else if (el.dataset.runKind) openRunModal(el.dataset.runKind, el.dataset.runId || null, el.dataset.runTitle);
+    };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+  });
 }
 
 /* ---------- drawer ---------- */
@@ -1269,7 +1332,7 @@ function fillDrawer(id) {
     <span class="type-chip" style="color:${tm.color};background:${tm.bg}">${tm.label}</span>
     ${sm ? `<span class="src-badge" style="color:${sm.color};background:${sm.bg}">${esc(sm.short)}</span>` : ''}
     <span class="mono" style="font-size:11px;color:#b0aaa1">${esc(cardRef(c))}${cardRef(c) !== c.id ? ' · ' + c.id : ''}</span>
-    <button class="dw-close" id="dw-close">✕</button>`;
+    <button class="dw-close" id="dw-close" aria-label="Close card">✕</button>`;
   $('#dw-close').addEventListener('click', closeDrawer);
   $('#dw-title').textContent = c.title;
 
@@ -1291,9 +1354,10 @@ function fillDrawer(id) {
     descBits.push(`<span class="mono" style="font-size:11px;color:#78716c;line-height:1.9">${facts.map(([k, v]) =>
       `<b style="color:#57534e">${esc(k)}</b> ${esc(v)}`).join(' &nbsp;·&nbsp; ')}</span>`);
   }
-  if ((s?.links || []).length) {
-    descBits.push(s.links.map((l) =>
-      `<a href="${esc(l.url)}" target="_blank" style="font-size:11.5px;color:#1d4ed8;text-decoration:none;border:1px solid #dbe3f8;background:#f2f5fd;border-radius:6px;padding:2px 8px;margin-right:6px">${esc(l.label)} ↗</a>`).join(''));
+  const safeLinks = (s?.links || []).filter((l) => safeUrl(l.url));
+  if (safeLinks.length) {
+    descBits.push(safeLinks.map((l) =>
+      `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" style="font-size:11.5px;color:#1d4ed8;text-decoration:none;border:1px solid #dbe3f8;background:#f2f5fd;border-radius:6px;padding:2px 8px;margin-right:6px">${esc(l.label)} ↗</a>`).join(''));
   }
   if (!s && c.pr_state) descBits.push(`<span class="mono" style="font-size:11px;color:#78716c">PR ${esc(c.pr_state.state)} · review=${esc(c.pr_state.review)} · checks=${esc(c.pr_state.checks)} · mergeable=${esc(c.pr_state.mergeable)}</span>`);
   descBits.push(`<span style="font-size:11px;color:#a8a29a">${s?.updated ? `details as of ${ago(s.updated)} · ` : ''}${enriching
@@ -1487,11 +1551,14 @@ $('#btn-run-sources').addEventListener('click', async () => {
 $('#btn-add-card').addEventListener('click', () => {
   $('#m-col').innerHTML = DATA.board.columns.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('');
   $('#modal-card').classList.add('open');
+  $('#m-title').focus();
 });
 $('#m-cancel').addEventListener('click', () => $('#modal-card').classList.remove('open'));
 $('#m-save').addEventListener('click', async () => {
   const title = $('#m-title').value.trim();
   if (!title) return toast('Title required', null);
+  const done = claim('#m-save');
+  if (!done) return; // already adding — a double-click would create two cards
   try {
     const res = await api('/api/add', {
       title, type: $('#m-type').value || undefined, column: $('#m-col').value,
@@ -1504,6 +1571,7 @@ $('#m-save').addEventListener('click', async () => {
     ['#m-title', '#m-pr', '#m-ticket', '#m-slack', '#m-project', '#m-note'].forEach((s) => ($(s).value = ''));
     toast(`${res.id} added`, title);
   } catch (err) { toast('Add failed', err.message); }
+  finally { done(); }
 });
 
 function openSourceModal(src) {
@@ -1515,6 +1583,7 @@ function openSourceModal(src) {
   if (src?.column) $('#s-col').value = src.column;
   $$('#s-tools input').forEach((cb) => { cb.checked = (src?.tools ?? []).includes(cb.value); });
   $('#modal-src').classList.add('open');
+  $('#s-title').focus();
 }
 $('#btn-new-source').addEventListener('click', () => openSourceModal(null));
 $('#s-cancel').addEventListener('click', () => $('#modal-src').classList.remove('open'));
@@ -1535,8 +1604,10 @@ $('#s-save').addEventListener('click', async () => {
 /* ---------- run viewer modal (triage / source runs) ---------- */
 let openRun = null; // {kind, id} while the modal is open
 
+let runModalLoading = false;
 async function loadRunModal() {
-  if (!openRun) return;
+  if (!openRun || runModalLoading) return; // 3s poll — no stacked/out-of-order applies
+  runModalLoading = true;
   try {
     const q = openRun.id ? `&id=${encodeURIComponent(openRun.id)}` : '';
     const d = await api(`/api/run/activity?kind=${openRun.kind}${q}`);
@@ -1547,7 +1618,7 @@ async function loadRunModal() {
     if (d.running) $('#run-body').scrollTop = $('#run-body').scrollHeight;
   } catch (err) {
     $('#run-body').innerHTML = `<div class="act-run"><span class="dot error"></span>${esc(err.message)}</div>`;
-  }
+  } finally { runModalLoading = false; }
 }
 
 function openRunModal(kind, id, title) {
@@ -1623,6 +1694,8 @@ $('#l-cancel').addEventListener('click', () => $('#modal-lane').classList.remove
 $('#l-save').addEventListener('click', async () => {
   const title = $('#l-title').value.trim();
   if (!title) return toast('Title required', null);
+  const done = claim('#l-save');
+  if (!done) return; // double-click on a new lane would append it twice
   try {
     DATA = await api('/api/column/save', {
       orig_id: editingLaneId,
@@ -1638,6 +1711,7 @@ $('#l-save').addEventListener('click', async () => {
     $('#modal-lane').classList.remove('open');
     toast('Lane saved', 'Written to board.yml.');
   } catch (err) { toast('Save failed', err.message); }
+  finally { done(); }
 });
 for (const [sel, dir] of [['#l-left', -1], ['#l-right', 1]]) {
   $(sel).addEventListener('click', async () => {
@@ -1683,11 +1757,14 @@ function openRuleModal(rule, presetColumn = null) {
   $('#r-cap').checked = !!rule?.capture_session;
   $('#r-delete').style.display = rule ? '' : 'none';
   $('#modal-rule').classList.add('open');
+  $('#r-name').focus();
 }
 $('#r-cancel').addEventListener('click', closeRuleModal);
 $('#r-save').addEventListener('click', async () => {
   const run = $('#r-run').value.trim();
   if (!run) return toast('Command required', null);
+  const done = claim('#r-save');
+  if (!done) return; // double-click on a new automation would append it twice
   try {
     DATA = await api('/api/automation/save', {
       column: $('#r-col').value,
@@ -1703,6 +1780,7 @@ $('#r-save').addEventListener('click', async () => {
     closeRuleModal();
     toast('Automation saved', 'Written to board.yml.');
   } catch (err) { toast('Save failed', err.message); }
+  finally { done(); }
 });
 $('#r-delete').addEventListener('click', async () => {
   if (!editingRule || !confirm('Delete this automation?')) return;
@@ -1836,9 +1914,13 @@ function render() {
   if (openCardId) fillDrawer(openCardId);
 }
 
+let refreshing = false;
 async function refresh() {
+  if (refreshing) return; // two timers hit /api/board — don't stack or let stale responses stomp fresh state
+  refreshing = true;
   try { DATA = await api('/api/board'); render(); }
   catch (err) { toast('Load failed', err.message); }
+  finally { refreshing = false; }
 }
 refresh();
 setInterval(() => { if (!openCardId && !document.querySelector('.modal.open')) refresh(); }, 12000);
